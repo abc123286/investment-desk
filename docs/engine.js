@@ -120,7 +120,7 @@ function usMood(){const dd=1-RIN.ndq/RIN.ndqPeak,v=RIN.vix;let val,term,dot='var
  return {dd,v,val,term,dot,hv:v>=25,rule:`Rule: VIX ${v.toFixed(2)} (25+ = high volatility) and Nasdaq ${(dd*100).toFixed(1)}% below its ${RIN.ndqPeakD} record of ${RIN.ndqPeak.toLocaleString('en-US')} (10–20% = correction, 20%+ = bear market).`}}
 function myMood(){const chg=RIN.klci/RIN.klciRef-1;
  let br=null,brTxt;
- if(BR.ok&&BR.up>0){br=BR.dn/BR.up;brTxt=`${BR.dn} of the ${BR.n} tracked Bursa stocks fell and ${BR.up} rose on ${fmtD(BR.day)}`}
+ if(BR.ok&&BR.up>0){br=BR.dn/BR.up;brTxt=`Of the ${BR.n} Bursa stocks with a price on ${fmtD(BR.day)}, ${BR.dn} fell and ${BR.up} rose`}
  else if(BR.ok){br=BR.dn>0?9:1;brTxt=`${BR.dn} of the ${BR.n} tracked Bursa stocks fell and none rose on ${fmtD(BR.day)}`}
  else if(resBrFresh){br=RIN.losers/RIN.gainers;brTxt=`${RIN.losers} Bursa stocks fell and ${RIN.gainers} rose (whole market, research note ${fmtD(R.BUILT.slice(0,10))})`}
  let val,term,dot='var(--brown)';
@@ -253,7 +253,7 @@ function evaluate(x,sk,opt={}){
  conf=Math.max(0,conf);
  let cls=missW>=.30?'Incomplete data':score>=70?'Strong Buy Candidate':score>=62?'Buy Candidate':score>=55?'Accumulate':score>=47?'Hold':score>=40?'Watchlist':score>=33?'Reduce':'Avoid';
  const caps=[];
- if(missW>=.30)caps.push(`Not labelled: ${Math.round(missW*100)}% of this strategy’s inputs are missing (${skipped.join(', ')}), and missing inputs count as zero.`);
+ if(missW>=.30)caps.push(`Not labelled: ${Math.round(missW*100)}% of this strategy’s inputs are missing (${skipped.join(', ')}), and missing inputs count as zero.${x.uni?' Whole-market stocks have no analyst target or price history. Ask Claude to move this stock to the core list for full data.':''}`);
  if(cls==='Strong Buy Candidate'&&conf<75){cls='Buy Candidate';caps.push('Strong Buy needs confidence of 75+.')}
  const capTo=(lvl,why)=>{if(rank(cls)>lvl)cls=RANKL[lvl];caps.push(rank(cls)<lvl?why.replace(/^Capped at \w+/,'Also flagged'):why)};
  if(!x.researched)capTo(3,'Capped at Hold: not yet researched (no catalysts or risks reviewed).');
