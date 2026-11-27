@@ -1,1 +1,67 @@
-{"v":1,"open":[],"closed":[]}
+{
+ "v": 1,
+ "updated": "2026-11-27T06:11:51.316Z",
+ "open": [
+  {
+   "id": "MAYBANK-2026-11-27",
+   "t": "MAYBANK",
+   "m": "MY",
+   "cur": "MYR",
+   "strategy": "bal",
+   "issued": "2026-11-27",
+   "issuedAt": "2026-11-27T06:11:19.000Z",
+   "priceAtIssue": 10.24,
+   "label": "Accumulate",
+   "score": 59,
+   "conf": 90,
+   "entryLo": 10.06,
+   "entryHi": 10.24,
+   "mid": 10.15,
+   "stop": 9.64,
+   "target": 11.68,
+   "rr": 3,
+   "horizonDays": 365
+  },
+  {
+   "id": "CIMB-2026-11-27",
+   "t": "CIMB",
+   "m": "MY",
+   "cur": "MYR",
+   "strategy": "bal",
+   "issued": "2026-11-27",
+   "issuedAt": "2026-11-27T06:11:19.000Z",
+   "priceAtIssue": 7.27,
+   "label": "Buy Candidate",
+   "score": 63,
+   "conf": 90,
+   "entryLo": 7.15,
+   "entryHi": 7.27,
+   "mid": 7.21,
+   "stop": 6.84,
+   "target": 8.31,
+   "rr": 2.97,
+   "horizonDays": 365
+  },
+  {
+   "id": "TENAGA-2026-11-27",
+   "t": "TENAGA",
+   "m": "MY",
+   "cur": "MYR",
+   "strategy": "bal",
+   "issued": "2026-11-27",
+   "issuedAt": "2026-11-27T06:11:19.000Z",
+   "priceAtIssue": 12.4,
+   "label": "Accumulate",
+   "score": 58,
+   "conf": 80,
+   "entryLo": 12.2,
+   "entryHi": 12.4,
+   "mid": 12.3,
+   "stop": 11.68,
+   "target": 15.94,
+   "rr": 5.87,
+   "horizonDays": 365
+  }
+ ],
+ "closed": []
+}
