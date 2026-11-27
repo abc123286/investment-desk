@@ -1,6 +1,6 @@
 {
  "v": 1,
- "updated": "2026-11-27T06:11:51.316Z",
+ "updated": "2026-11-27T07:39:12.441Z",
  "open": [
   {
    "id": "MAYBANK-2026-11-27",
@@ -20,7 +20,10 @@
    "stop": 9.64,
    "target": 11.68,
    "rr": 3,
-   "horizonDays": 365
+   "horizonDays": 365,
+   "last": 10.26,
+   "lastAt": "2026-11-27T07:38:46.000Z",
+   "lastLabel": "Accumulate"
   },
   {
    "id": "CIMB-2026-11-27",
@@ -40,7 +43,10 @@
    "stop": 6.84,
    "target": 8.31,
    "rr": 2.97,
-   "horizonDays": 365
+   "horizonDays": 365,
+   "last": 7.29,
+   "lastAt": "2026-11-27T07:38:46.000Z",
+   "lastLabel": "Buy Candidate"
   },
   {
    "id": "TENAGA-2026-11-27",
@@ -60,7 +66,10 @@
    "stop": 11.68,
    "target": 15.94,
    "rr": 5.87,
-   "horizonDays": 365
+   "horizonDays": 365,
+   "last": 12.46,
+   "lastAt": "2026-11-27T07:38:46.000Z",
+   "lastLabel": "Accumulate"
   }
  ],
  "closed": []
