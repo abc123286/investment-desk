@@ -66,6 +66,7 @@ MY = [
     ("MRDIY", "5296", "Consumer", "MR D.I.Y"), ("SUNWAY", "5211", "Property / healthcare", "Sunway"), ("YTL", "4677", "Utilities", "YTL Corp"),
     ("GENTING", "3182", "Leisure", "Genting"), ("SIME", "4197", "Industrial", "Sime"),
     ("NATGATE", "0270", "Electronics (EMS)", "Nation"), ("FRONTKN", "0128", "Semiconductors", "Frontken"), ("VITROX", "0097", "Semiconductors", "ViTrox"),
+    ("INFOTEC", "0253", "IT services", "Infoline"),
 ]
 INDEX = {  # page KPI name -> (Yahoo symbol, market)
     "S&P 500": ("^GSPC", "US"), "Nasdaq Comp.": ("^IXIC", "US"), "Dow Jones": ("^DJI", "US"), "Russell 2000": ("^RUT", "US"),
