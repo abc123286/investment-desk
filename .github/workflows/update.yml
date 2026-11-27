@@ -1,15 +1,19 @@
 name: Update data
 
+# GitHub's own schedule does not start this workflow reliably for this repository, so an outside timer
+# (cron-job.org) starts it every 15 minutes through the "workflow_dispatch" API with market=AUTO.
+# The schedule below is kept as a backup in case GitHub starts honouring it.
 on:
   schedule:
-    # Times are UTC. MYT = UTC+8. GitHub may start scheduled runs a few minutes late.
-    - cron: "*/15 1-9 * * 1-5"    # every 15 min, 9:00am–5:45pm MYT — Bursa prices
-    - cron: "*/15 14-21 * * 1-5"  # every 15 min, 10:00pm–5:45am MYT — US prices
+    - cron: "*/15 1-9 * * 1-5"    # 9:00am–5:45pm MYT — Bursa prices (times are UTC)
+    - cron: "*/15 13-21 * * 1-5"  # 9:00pm–5:45am MYT — US prices
   workflow_dispatch:
     inputs:
       market:
-        description: "Which market to refresh (ALL, US or MY)"
-        default: "ALL"
+        description: "Which market to refresh"
+        type: choice
+        options: [AUTO, ALL, US, MY]
+        default: AUTO
 
 permissions:
   contents: write
@@ -28,14 +32,28 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - run: pip install -r requirements.txt
-      - run: python scripts/update.py ${{ github.event.inputs.market || '' }}
+      - name: Fetch prices
+        id: fetch
+        env:
+          DESK_MARKET: ${{ github.event.inputs.market || 'AUTO' }}
+        run: |
+          case "$DESK_MARKET" in AUTO|ALL|US|MY) ;; *) echo "Bad market value"; exit 2;; esac
+          python scripts/update.py
+      - name: Lock signals
+        if: success()
+        run: node scripts/signals.mjs
       - name: Commit new data
+        # also runs when the fetch failed, so the page can show the failed attempt; the job still ends as failed
+        if: always() && hashFiles('docs/data/desk.json') != ''
         run: |
           git config user.name "investment-desk-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add docs/data/desk.json
+          git add docs/data/desk.json docs/data/signals.json 2>/dev/null || git add docs/data/desk.json
           if git diff --cached --quiet; then echo "No changes"; exit 0; fi
           git commit -m "Data update $(date -u +'%Y-%m-%d %H:%M UTC')"
-          git pull --rebase origin main || true
-          git push
+          for i in 1 2 3; do git pull --rebase origin main && git push && exit 0; sleep 5; done
+          exit 1

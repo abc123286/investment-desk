@@ -1,37 +1,39 @@
-"""Investment Desk data updater.
+"""Investment Desk price updater.
 
-Runs in GitHub Actions (see .github/workflows/update.yml). Pulls end-of-day /
-delayed quotes, 30-day closes and basic valuation fields from Yahoo Finance via
-the open-source `yfinance` package, and writes docs/data/desk.json, which the
-web page reads. The page does all scoring itself.
+Runs in GitHub Actions (.github/workflows/update.yml), started every 15 minutes
+by an outside timer during market hours. Pulls delayed / end-of-day quotes,
+30-day closes and basic valuation fields from Yahoo Finance via `yfinance` and
+writes docs/data/desk.json. The web page and scripts/signals.mjs do the scoring.
 
-Rules:
-- Never invent numbers. A field that can't be fetched is written as null and the
-  page leaves it out of the score.
-- Bursa codes are checked against the company name Yahoo returns; a mismatch
-  means the code is wrong, so the stock is skipped rather than shown under the
-  wrong name.
+Honesty rules:
+- Never invent numbers. A field that can't be fetched is null, never 0.
+- Every stock record carries `asOf` (when it was fetched) and `intraday`
+  (fetched before that market's close on its price date).
+- Records that could not be refreshed keep their old values, old `asOf` and get
+  `stale: true`. `mkUpdated` only moves forward for a market when at least half
+  of its stocks were freshly fetched. Otherwise the script exits with an error,
+  so the GitHub run shows as failed.
+- Indices that fail keep their previous values and dates; they are never dropped.
+- Bursa codes are checked against the company name Yahoo returns.
 """
 from __future__ import annotations
 
 import json
 import math
+import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import yfinance as yf
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs" / "data" / "desk.json"
+OUT = Path(os.environ.get("DESK_OUT") or ROOT / "docs" / "data" / "desk.json")
+NY, KL = ZoneInfo("America/New_York"), ZoneInfo("Asia/Kuala_Lumpur")
 
-# ---------------------------------------------------------------------------
-# Universe. t = ticker shown on the page, y = Yahoo symbol, tv = TradingView
-# symbol, m = market, sec = sector label, kw = word that must appear in Yahoo's
-# company name (guards against a wrong Bursa code).
-# The first 20 are the hand-researched watchlist already in the page.
-# ---------------------------------------------------------------------------
+# (page ticker, sector, word that must appear in Yahoo's company name)
 US = [
     ("NVDA", "Semiconductors", "NVIDIA"), ("MSFT", "Software", "Microsoft"), ("AAPL", "Consumer tech", "Apple"),
     ("GOOGL", "Internet", "Alphabet"), ("AMZN", "Internet retail / cloud", "Amazon"), ("META", "Internet", "Meta"),
@@ -47,6 +49,7 @@ US = [
     ("COST", "Consumer staples", "Costco"), ("PG", "Consumer staples", "Procter"), ("PEP", "Consumer staples", "Pepsi"),
     ("HD", "Retail", "Home Depot"),
 ]
+NYSE_LISTED = {"JPM", "LLY", "KO", "TSM", "BRK-B", "V", "MA", "BAC", "UNH", "JNJ", "XOM", "CVX", "WMT", "PG", "HD", "ORCL", "CRM"}
 # (page ticker, Bursa code, sector, name keyword)
 MY = [
     ("MAYBANK", "1155", "Banking", "Malayan"), ("PBBANK", "1295", "Banking", "Public Bank"), ("CIMB", "1023", "Banking", "CIMB"),
@@ -64,11 +67,12 @@ MY = [
     ("GENTING", "3182", "Leisure", "Genting"), ("SIME", "4197", "Industrial", "Sime"),
     ("NATGATE", "0270", "Electronics (EMS)", "Nation"), ("FRONTKN", "0128", "Semiconductors", "Frontken"), ("VITROX", "0097", "Semiconductors", "ViTrox"),
 ]
-
-INDEX = {  # page KPI name -> Yahoo symbol
-    "S&P 500": "^GSPC", "Nasdaq Comp.": "^IXIC", "Dow Jones": "^DJI", "Russell 2000": "^RUT", "VIX": "^VIX",
-    "FBM KLCI": "^KLSE", "USD/MYR": "MYR=X", "Brent crude": "BZ=F", "US 10-yr yield": "^TNX",
+INDEX = {  # page KPI name -> (Yahoo symbol, market)
+    "S&P 500": ("^GSPC", "US"), "Nasdaq Comp.": ("^IXIC", "US"), "Dow Jones": ("^DJI", "US"), "Russell 2000": ("^RUT", "US"),
+    "VIX": ("^VIX", "US"), "Brent crude": ("BZ=F", "US"), "US 10-yr yield": ("^TNX", "US"),
+    "FBM KLCI": ("^KLSE", "MY"), "USD/MYR": ("MYR=X", "MY"),
 }
+SLEEP = float(os.environ.get("DESK_SLEEP", "0.4"))
 
 
 def num(v):
@@ -79,37 +83,46 @@ def num(v):
         return None
 
 
+def close_utc(day: str, m: str) -> datetime:
+    """When that market's regular session ends on `day` (YYYY-MM-DD), in UTC."""
+    d = datetime.strptime(day, "%Y-%m-%d")
+    if m == "MY":
+        return datetime(d.year, d.month, d.day, 17, 0, tzinfo=KL).astimezone(timezone.utc)
+    early = {"2026-11-27", "2026-12-24", "2027-11-26"}  # NYSE 1pm closes
+    h = 13 if day in early else 16
+    return datetime(d.year, d.month, d.day, h, 0, tzinfo=NY).astimezone(timezone.utc)
+
+
 def closes(sym: str, period: str = "3mo"):
-    """Return [(YYYY-MM-DD, close), ...] oldest first, or []."""
+    """[(YYYY-MM-DD, close), ...] oldest first, or [] after 3 failed tries."""
     for attempt in range(3):
         try:
             h = yf.Ticker(sym).history(period=period, interval="1d", auto_adjust=False)
-            out = []
-            for ts, row in h.iterrows():
-                c = num(row.get("Close"))
-                if c is not None:
-                    out.append((ts.strftime("%Y-%m-%d"), round(c, 4)))
-            return out
-        except Exception as e:  # network hiccup / rate limit
+            out = [(ts.strftime("%Y-%m-%d"), round(c, 4)) for ts, c in ((ts, num(r.get("Close"))) for ts, r in h.iterrows()) if c is not None]
+            if out:
+                return out
+        except Exception as e:
             print(f"  history {sym} attempt {attempt + 1} failed: {e}", file=sys.stderr)
-            time.sleep(2 + attempt * 3)
+        time.sleep(1 + attempt * 3)
     return []
 
 
 def info(sym: str) -> dict:
     for attempt in range(3):
         try:
-            return yf.Ticker(sym).info or {}
+            d = yf.Ticker(sym).info
+            if d:
+                return d
         except Exception as e:
             print(f"  info {sym} attempt {attempt + 1} failed: {e}", file=sys.stderr)
-            time.sleep(2 + attempt * 3)
+        time.sleep(1 + attempt * 3)
     return {}
 
 
-def stock(page_t: str, ysym: str, tv: str, m: str, sec: str, kw: str):
+def stock(page_t, ysym, tv, m, sec, kw, now):
     inf = info(ysym)
     name = inf.get("longName") or inf.get("shortName") or ""
-    if kw.lower() not in name.lower():
+    if not name or kw.lower() not in name.lower():
         print(f"SKIP {page_t} ({ysym}): Yahoo name '{name}' does not contain '{kw}'", file=sys.stderr)
         return None
     hist = closes(ysym)
@@ -118,40 +131,40 @@ def stock(page_t: str, ysym: str, tv: str, m: str, sec: str, kw: str):
         return None
     d, p = hist[-1]
     prev = hist[-2][1]
-    price = p  # the last daily close, so price and date always match
     pe, fpe = num(inf.get("trailingPE")), num(inf.get("forwardPE"))
-    tgt = num(inf.get("targetMeanPrice"))
     na = inf.get("numberOfAnalystOpinions")
-    rec = (inf.get("recommendationKey") or "").replace("_", " ").title() or None
+    rec = (inf.get("recommendationKey") or "").strip().lower()
     dps = num(inf.get("dividendRate"))
-    if dps is None and num(inf.get("trailingAnnualDividendRate")) is not None:
+    if dps is None:
         dps = num(inf.get("trailingAnnualDividendRate"))
-    lo, hi = num(inf.get("fiftyTwoWeekLow")), num(inf.get("fiftyTwoWeekHigh"))
-    mcap = num(inf.get("marketCap"))
-    cur = "MYR" if m == "MY" else "USD"
-    last30 = [c for _, c in hist[-30:]][::-1]  # newest first, like the page
     return {
-        "t": page_t, "n": name, "m": m, "sec": sec, "cur": cur, "tv": tv, "y": ysym,
-        "ex": inf.get("exchange") or ("Bursa" if m == "MY" else ""),
-        "p": price, "ch": round((price / prev - 1) * 100, 2) if prev else None, "d": d,
-        "pRef": price, "pe": pe if pe and pe > 0 else None, "fpe": fpe if fpe and fpe > 0 else None, "fd": d,
-        "tgt": tgt, "na": int(na) if isinstance(na, (int, float)) else 0, "an": rec or "n/a",
-        "dps": dps if dps is not None else 0.0, "lo": lo, "hi": hi,
-        "mc": mcap, "hist": last30,
+        "t": page_t, "n": name, "m": m, "sec": sec, "cur": "MYR" if m == "MY" else "USD", "tv": tv, "y": ysym,
+        "ex": "Bursa" if m == "MY" else ("NYSE" if page_t in NYSE_LISTED else "NASDAQ"),
+        "p": p, "ch": round((p / prev - 1) * 100, 2) if prev else None, "d": d,
+        "asOf": now.isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "intraday": now < close_utc(d, m),
+        "pe": pe if pe and pe > 0 else None, "fpe": fpe if fpe and fpe > 0 else None,
+        "tgt": num(inf.get("targetMeanPrice")),
+        "na": int(na) if isinstance(na, (int, float)) and na > 0 else None,
+        "an": None if rec in ("", "none", "n/a") else rec.replace("_", " ").title(),
+        "dps": dps,  # None = unknown (never assumed to be 0)
+        "lo": num(inf.get("fiftyTwoWeekLow")), "hi": num(inf.get("fiftyTwoWeekHigh")),
+        "mc": num(inf.get("marketCap")), "hist": [c for _, c in hist[-30:]][::-1],
+        "histDates": [x for x, _ in hist[-30:]][::-1],
     }
 
 
-MY_IDX = {"FBM KLCI", "USD/MYR"}
-
-
 def pick_market(now: datetime) -> str:
-    """MY during Bursa hours, US during US hours, else ALL. Override with argv[1]."""
-    if len(sys.argv) > 1 and sys.argv[1].upper() in {"US", "MY", "ALL"}:
-        return sys.argv[1].upper()
+    v = (os.environ.get("DESK_MARKET") or (sys.argv[1] if len(sys.argv) > 1 else "")).strip().upper()
+    if v in {"US", "MY", "ALL"}:
+        return v
+    if v not in {"", "AUTO"}:
+        print(f"Unknown market '{v}'; use AUTO, ALL, US or MY.", file=sys.stderr)
+        sys.exit(2)
     h = now.hour  # UTC
-    if 0 <= h <= 10:      # 8am–6pm MYT
+    if 0 <= h <= 10:
         return "MY"
-    if 13 <= h <= 22:     # 9pm–6am MYT (US session incl. pre/after)
+    if 13 <= h <= 22:
         return "US"
     return "ALL"
 
@@ -159,6 +172,7 @@ def pick_market(now: datetime) -> str:
 def main() -> int:
     now = datetime.now(timezone.utc)
     mk = pick_market(now)
+    stamp = now.isoformat(timespec="seconds").replace("+00:00", "Z")
     print(f"Updating market: {mk}")
     prev = {}
     if OUT.exists():
@@ -166,47 +180,72 @@ def main() -> int:
             prev = json.loads(OUT.read_text())
         except Exception:
             prev = {}
-    out = {"updated": now.isoformat(timespec="seconds").replace("+00:00", "Z"), "source": "Yahoo Finance via yfinance (delayed ~15 min / end-of-day)", "stocks": [], "idx": {}, "series": {}, "skipped": [], "mkUpdated": dict(prev.get("mkUpdated") or {})}
-    # keep the other market's data from the previous file
-    if mk != "ALL":
-        out["stocks"] = [r for r in prev.get("stocks", []) if r and r.get("m") != mk]
-        for k, v in (prev.get("idx") or {}).items():
-            if (k in MY_IDX) != (mk == "MY"):
-                out["idx"][k] = v
-                if k in (prev.get("series") or {}):
-                    out["series"][k] = prev["series"][k]
-    fresh = []
-    for t, sec, kw in (US if mk in ("US", "ALL") else []):
-        r = stock(t, t, ("NYSE:" if t in {"JPM", "LLY", "KO", "TSM", "BRK-B", "V", "MA", "BAC", "UNH", "JNJ", "XOM", "CVX", "WMT", "PG", "HD", "ORCL", "CRM"} else "NASDAQ:") + t.replace("-", "."), "US", sec, kw)
-        (fresh if r else out["skipped"]).append(r or t)
-        time.sleep(0.4)
-    for t, code, sec, kw in (MY if mk in ("MY", "ALL") else []):
-        r = stock(t, f"{code}.KL", f"MYX:{t}", "MY", sec, kw)
-        (fresh if r else out["skipped"]).append(r or t)
-        time.sleep(0.4)
-    # a stock that failed this time keeps its previous data rather than vanishing
-    got = {r["t"] for r in fresh}
-    for r in prev.get("stocks", []):
-        if r and r.get("t") in out["skipped"] and r["t"] not in got and (mk == "ALL" or r.get("m") == mk):
-            fresh.append(r)
-    out["stocks"] += fresh
-    for name, ysym in INDEX.items():
-        if mk != "ALL" and (name in MY_IDX) != (mk == "MY"):
+    prev_stocks = {r["t"]: r for r in prev.get("stocks", []) if r and r.get("t")}
+    markets = ["US", "MY"] if mk == "ALL" else [mk]
+    jobs = [(t, t, ("NYSE:" if t in NYSE_LISTED else "NASDAQ:") + t.replace("-", "."), "US", sec, kw) for t, sec, kw in US] + \
+           [(t, f"{code}.KL", None, "MY", sec, kw) for t, code, sec, kw in MY]
+
+    out_stocks, fresh_count, attempted, failed = [], {m: 0 for m in markets}, {m: 0 for m in markets}, []
+    for page_t, ysym, tv, m, sec, kw in jobs:
+        if m not in markets:
+            if page_t in prev_stocks:
+                out_stocks.append(prev_stocks[page_t])
+            continue
+        attempted[m] += 1
+        r = stock(page_t, ysym, tv, m, sec, kw, now)
+        if r:
+            fresh_count[m] += 1
+            out_stocks.append(r)
+        else:
+            failed.append(page_t)
+            if page_t in prev_stocks:  # keep old data, clearly marked
+                old = dict(prev_stocks[page_t])
+                old["stale"] = True
+                out_stocks.append(old)
+        time.sleep(SLEEP)
+
+    idx, series = dict(prev.get("idx") or {}), dict(prev.get("series") or {})
+    idx_failed = []
+    for name, (ysym, m) in INDEX.items():
+        if m not in markets:
             continue
         h = closes(ysym, "2mo")
         if len(h) >= 2:
             d, v = h[-1]
-            out["idx"][name] = {"v": round(v, 4), "c": round((v / h[-2][1] - 1) * 100, 2), "d": d}
-            out["series"][name] = h[-25:]
-        time.sleep(0.4)
-    for m in (["US", "MY"] if mk == "ALL" else [mk]):
-        out["mkUpdated"][m] = out["updated"]
-    if len([r for r in fresh if r.get("p")]) < 5:
-        print("Too few stocks fetched; not overwriting the data file.", file=sys.stderr)
-        return 1
+            idx[name] = {"v": round(v, 4), "c": round((v / h[-2][1] - 1) * 100, 2), "d": d, "asOf": stamp, "intraday": now < close_utc(d, m)}
+            series[name] = h[-25:]
+        else:
+            idx_failed.append(name)
+            if name in idx:
+                idx[name] = dict(idx[name], stale=True)
+        time.sleep(SLEEP)
+
+    mk_updated = dict(prev.get("mkUpdated") or {})
+    ok_markets, bad_markets = [], []
+    for m in markets:
+        if attempted[m] and fresh_count[m] >= attempted[m] / 2:
+            mk_updated[m] = stamp
+            ok_markets.append(m)
+        else:
+            bad_markets.append(m)
+
+    out = {
+        "updated": stamp if ok_markets else prev.get("updated"),
+        "lastAttempt": stamp,
+        "lastAttemptMarkets": markets,
+        "source": "Yahoo Finance via yfinance (delayed ~15 min / end-of-day)",
+        "stocks": out_stocks, "idx": idx, "series": series,
+        "mkUpdated": mk_updated,
+        "failed": failed, "idxFailed": idx_failed,
+        "fresh": fresh_count, "attempted": attempted,
+    }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(out, separators=(",", ":"), ensure_ascii=False))
-    print(f"Wrote {OUT} with {len(out['stocks'])} stocks; skipped {out['skipped']}")
+    print(f"Fresh: {fresh_count} of {attempted}. Failed stocks: {failed}. Failed indices: {idx_failed}")
+    if bad_markets:
+        # The file is still written (so the page can show the failed attempt), but the run fails visibly.
+        print(f"ERROR: too few fresh prices for {bad_markets}; their 'updated' time was NOT moved forward.", file=sys.stderr)
+        return 1
     return 0
 
 
