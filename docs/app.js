@@ -289,13 +289,16 @@ window.__desk={E,evaluate:E.evaluate,S};
 }
 
 (async()=>{
- [LIVE,SIGS]=await Promise.all([getJSON('data/desk.json'),getJSON('data/signals.json')]);
- try{start()}catch(e){document.body.insertAdjacentHTML('afterbegin','<p style="padding:16px">The page could not start. Please reload.</p>');console.error(e);return}
- // every 5 minutes: look for newer prices, and re-check how old the current ones are
- if(LIVE)setInterval(async()=>{const J=await getJSON('data/desk.json');
-  if(J&&J.updated&&J.updated!==LIVE.updated){const nb=$('newData');nb.hidden=false;nb.innerHTML=`New prices are in (updated ${esc(E.hhmm(J.updated))}). <button type="button" class="pri" onclick="location.reload()">Refresh now</button>`;
-   const ab=$('ageBanner');ab.hidden=false;ab.innerHTML=`New prices are in (updated ${esc(E.hhmm(J.updated))}) — <a href="javascript:location.reload()" style="color:inherit">tap to refresh</a>`;return}
+ const q='?t='+Date.now();[LIVE,SIGS]=await Promise.all([getJSON('data/desk.json'+q),getJSON('data/signals.json'+q)]);
+ try{start();const k=JSON.parse(sessionStorage.getItem('desk-scroll')||'null');if(k&&k.h===location.hash){sessionStorage.removeItem('desk-scroll');requestAnimationFrame(()=>scrollTo(0,k.y))}}catch(e){document.body.insertAdjacentHTML('afterbegin','<p style="padding:16px">The page could not start. Please reload.</p>');console.error(e);return}
+ // every minute: load newer prices automatically (no button needed) and re-check how old the current ones are
+ if(LIVE)setInterval(async()=>{const J=await getJSON('data/desk.json?t='+Date.now());
+  const typing=document.activeElement&&/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+  const busyAsk=location.hash==='#ask'&&document.querySelector('#chat .msg');
+  if(J&&J.updated&&J.updated!==LIVE.updated){
+   if(!typing&&!busyAsk){try{sessionStorage.setItem('desk-scroll',JSON.stringify({h:location.hash,y:scrollY,t:J.updated}))}catch(e){}location.reload();return}
+   const nb=$('newData');nb.hidden=false;nb.innerHTML=`New prices are in (updated ${esc(E.hhmm(J.updated))}). <button type="button" class="pri" onclick="location.reload()">Refresh now</button>`;return}
   const E2=makeEngine({R:DESK_RESEARCH,live:LIVE,signals:SIGS,now:nowDate()}),st=E2.status(),ab=$('ageBanner');
-  if(st.length){ab.hidden=false;ab.innerHTML=st.map(s=>esc(s.text)).join('<br>')}},300000);
+  if(st.length){ab.hidden=false;ab.innerHTML=st.map(s=>esc(s.text)).join('<br>')}else ab.hidden=true},60000);
 })();
 })();

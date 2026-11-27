@@ -6,13 +6,13 @@ A personal research dashboard for US and Bursa Malaysia stocks: https://abc12328
 - **Scored stocks**: about 70 stocks (20 researched plus large caps from both markets) get a 0–100 score, a data-confidence score, a label and a trade plan.
 - **Locked signals**: when a stock's Balanced label reaches Accumulate or better, its entry, stop and target are locked and tracked to the end (Signal record page).
 - **My stocks**: watchlist and portfolio, saved only in your browser.
-- **Automatic data**: every 15 minutes during each market's trading hours (Bursa 9am–5pm MYT; US 9:30pm–5am MYT, an hour later outside US daylight saving), with exchange holidays and US half-days built in.
+- **Automatic data**: Bursa every 5 minutes and US every 15 minutes during trading hours (Bursa 9am–5pm MYT; US 9:30pm–5am MYT, an hour later outside US daylight saving), with exchange holidays and US half-days built in.
 
 Not financial advice. Labels, entries and stops are formula outputs, not recommendations.
 
 ## How the 15-minute update is started
 
-GitHub's built-in schedule does not start this workflow reliably, so an outside timer (cron-job.org, free) calls GitHub every 15 minutes:
+GitHub's built-in schedule does not start this workflow reliably, so an outside timer (cron-job.org, free) calls GitHub (Bursa job every 5 minutes with market=MY, 9am–5:15pm MYT Mon–Fri; US job every 15 minutes with market=US, 9:30pm–5:15am MYT):
 
 - URL: `https://api.github.com/repos/abc123286/investment-desk/actions/workflows/update.yml/dispatches`
 - Method: `POST`, body `{"ref":"main","inputs":{"market":"AUTO"}}`
