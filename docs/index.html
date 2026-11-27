@@ -547,7 +547,7 @@ let STRATK='bal';try{const v=localStorage.getItem('desk-strat');if(STRAT[v])STRA
 
 /* ================= COMMAND CENTRE ================= */
 function header(){
- const rng=mk=>{const ds=S.filter(x=>x.m===mk).map(x=>x.d).sort();const lo=ds[0],hi=ds.at(-1),old=ds.filter(d=>d<hi).length;return lo===hi?`close ${fmtD(hi)} (all ${ds.length})`:`closes ${fmtD(lo)}–${fmtD(hi)} (${old} of ${ds.length} older than ${fmtD(hi)})`};
+ const rng=mk=>{const ds=S.filter(x=>x.m===mk).map(x=>x.d).sort();const lo=ds[0],hi=ds.at(-1),old=ds.filter(d=>d<hi).length;const live=closeTs(hi,mk)>NOW?'intraday':'close';return lo===hi?`${live} ${fmtD(hi)} (all ${ds.length})`:`${live} ${fmtD(lo)}–${fmtD(hi)} (${old} of ${ds.length} older than ${fmtD(hi)})`};
  const snapAge=calDays(SNAP,NOW);
  document.getElementById('asof').innerHTML=`${LIVE?`<span><b>Auto-updated</b> every 15 min in market hours · Bursa ${esc(hhmm(LIVE.mkUpdated&&LIVE.mkUpdated.MY))} · US ${esc(hhmm(LIVE.mkUpdated&&LIVE.mkUpdated.US))} · ${S.length} stocks scored</span>`:''}<span>${LIVE?'Data updated':'Snapshot built'} ${esc(SNAP.toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kuala_Lumpur'}))} MYT${snapAge>=1?` · <b>${Math.floor(snapAge)} day${snapAge>=2?'s':''} old</b>`:''}</span><span>US stock prices: ${esc(rng('US'))}</span><span>Bursa stock prices: ${esc(rng('MY'))}</span>`;
  const ban=document.getElementById('ageBanner');
