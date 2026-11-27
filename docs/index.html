@@ -147,14 +147,19 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}html{scroll-padding-top:
 <!-- LIVE -->
 <section id="v-live" class="view"><div class="band"><div class="wrap">
 <h2>Live market</h2>
-<p class="mute">Look up any US or Bursa stock. Charts and quotes come straight from TradingView; Bursa prices are usually delayed by about 15 minutes, US prices are near real-time or slightly delayed. These live views are separate from the scores, which update three times a day.</p>
+<p class="mute">US: live charts and a whole-market screener from TradingView (near real-time). Bursa: TradingView's free widgets don't include Bursa data, so the Bursa board below uses Yahoo Finance prices that this site refreshes every 15 minutes during trading hours (about 15 minutes delayed). Scores refresh at the same time.</p>
+<div id="newData" class="warnbox" hidden></div>
+<h3 style="margin-top:14px">Bursa price board <span class="mute sm" id="myUpd"></span></h3>
+<div class="filters"><label>Sort<select id="bSort"><option value="ch">Biggest moves</option><option value="up">Top gainers</option><option value="dn">Top losers</option><option value="t">A–Z</option><option value="score">Score</option></select></label></div>
+<div class="scroll"><table class="stack" id="bBoard"></table></div>
+<p class="sm mute">Tap a row for the stock's file. Need a Bursa stock that isn't listed? It can be added to the updater's list.</p>
+<h3 style="margin-top:22px">US live ticker</h3>
 <div id="tvTape" class="tvbox" style="min-height:46px"></div>
-<h3 style="margin-top:18px">Chart any stock</h3>
-<p class="sm mute">Type a name or code in the chart's search box (top left of the chart), e.g. <b>MYX:NATGATE</b>, <b>MYX:1155</b> or <b>NASDAQ:AMD</b>. Or tap a quick pick:</p>
+<h3 style="margin-top:18px">Chart any US stock</h3>
+<p class="sm mute">Type a name or ticker in the chart's search box (top left of the chart), e.g. <b>AMD</b> or <b>NASDAQ:PLTR</b>. Or tap a quick pick:</p>
 <div class="seg" id="tvPicks"></div>
 <div id="tvChart" class="tvbox" style="height:560px"></div>
-<h3 style="margin-top:22px">Screen the whole market</h3>
-<div class="seg" role="group" aria-label="Screener market"><button type="button" data-scr="malaysia" aria-pressed="true">Bursa Malaysia (all stocks)</button><button type="button" data-scr="america" aria-pressed="false">US (all stocks)</button></div>
+<h3 style="margin-top:22px">Screen the whole US market</h3>
 <div id="tvScreener" class="tvbox" style="height:620px"></div>
 <p class="sm mute" id="tvNote" style="margin-top:8px">Live widgets by TradingView. They load only on the website version of this dashboard; inside Claude they are blocked.</p>
 </div></div></section>
@@ -231,7 +236,7 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}html{scroll-padding-top:
 <h3>Trade plan</h3>
 <p>Stop distance = 1.5 × daily volatility × √10 (about a 10-day move), kept between 5% and 15%; without price history, 20% of 52-week range ÷ price, kept between 6% and 15%. Entry zone = price down to price × (1 − stop distance ÷ 3). Stop = entry midpoint × (1 − stop distance). Reward/risk is measured from the entry midpoint. Prices snap to Bursa tick sizes (0.5 sen under RM1, 1 sen to RM9.99, 2 sen to RM99.98, 10 sen above) or US cents. Below 1.5 : 1 reward/risk the plan is shown but marked not worth taking. Position size = (account × risk %) ÷ (entry − stop), in 100-share board lots for Bursa.</p>
 <h3>Website version: automatic data</h3>
-<p>On the website, prices, 52-week ranges, P/E, analyst targets and 30-day closes for every scored stock are refreshed three times a day from Yahoo Finance (through the open-source yfinance tool, run by a scheduled GitHub Action). That is one source, so each price loses 10 confidence points; if Yahoo lacks a forward P/E or target, that part is left out. Company codes are checked against Yahoo's company name so a wrong code can't show the wrong company. Live charts and the whole-market screener come from TradingView widgets. News scores still come from the researched event list.</p>
+<p>On the website, prices, 52-week ranges, P/E, analyst targets and 30-day closes for every scored stock are refreshed every 15 minutes during each market's trading hours from Yahoo Finance (prices about 15 minutes delayed) (through the open-source yfinance tool, run by a scheduled GitHub Action). That is one source, so each price loses 10 confidence points; if Yahoo lacks a forward P/E or target, that part is left out. Company codes are checked against Yahoo's company name so a wrong code can't show the wrong company. US live charts and the whole-US-market screener come from TradingView widgets; TradingView's free widgets carry no Bursa data, so Bursa uses the price board. News scores still come from the researched event list.</p>
 <h3>Not in this snapshot</h3>
 <p>MACD, moving averages, volume indicators, candlestick patterns, ROE/margins, DCF valuations and backtests. Momentum, volatility and RSI are calculated only for the 11 stocks with 30 days of closes.</p>
 </div>
@@ -385,7 +390,7 @@ const COMP={val:'Valuation',up:'Analyst upside',gr:'Growth',mom:'Momentum',dip:'
 /* ================= LIVE DATA LOADER (website version) ================= */
 let LIVE=null;
 const TVX={JPM:'NYSE',LLY:'NYSE',KO:'NYSE'};
-const tvSym=x=>x.tv||(x.m==='MY'?'MYX:'+x.t:(TVX[x.t]||'NASDAQ')+':'+x.t);
+const tvSym=x=>x.m==='MY'?null:(x.tv||(TVX[x.t]||'NASDAQ')+':'+x.t); // TradingView's free widgets carry no Bursa data
 const fmtMc=(v,c)=>!ok(v)?'n/a':(c==='MYR'?'RM':'$')+(v>=1e12?(v/1e12).toFixed(2)+'T':v>=1e9?(v/1e9).toFixed(1)+'B':(v/1e6).toFixed(0)+'M');
 function mergeLive(J){
  if(!J||!Array.isArray(J.stocks))return;LIVE=J;SNAP=new Date(J.updated);
@@ -536,7 +541,7 @@ const money=(v,c,dp)=>{if(!ok(v))return 'n/a';const d=dp??(c==='MYR'?(v<1?3:2):2
 const pct=(v,d=1)=>ok(v)?(v>=0?'+':'')+(v*100).toFixed(d)+'%':'n/a';
 const sgn=v=>v>0?'up':v<0?'dn':'';
 const n1=(v,d=1)=>ok(v)?v.toFixed(d):'n/a';
-function ageTag(x){const M=ALL[x.t];const a=M&&!M.bad?M.age:99;return `${a>2?`<span class="stale">Stale · ${esc(fmtD(x.d))}</span>`:`EOD · ${esc(fmtD(x.d))}`} · ${x.s2?'2 sources':'1 source'}`}
+function ageTag(x){const M=ALL[x.t];const a=M&&!M.bad?M.age:99;if(closeTs(x.d,x.m)>NOW&&LIVE&&LIVE.mkUpdated&&LIVE.mkUpdated[x.m])return `<span class="up">Intraday · ${esc(hhmm(LIVE.mkUpdated[x.m]))}</span> · delayed ~15 min`;return `${a>2?`<span class="stale">Stale · ${esc(fmtD(x.d))}</span>`:`EOD · ${esc(fmtD(x.d))}`} · ${x.s2?'2 sources':'1 source'}`}
 const scoreCell=s=>s===null?'<span class="mute">n/a</span>':`<div style="display:flex;gap:8px;align-items:center"><b style="width:2.2em;text-align:right">${s}</b><div class="bar" style="flex:1"><i style="width:${s}%;background:${s>=55?'var(--up)':s>=40?'var(--brown)':'var(--dn)'}"></i></div></div>`;
 let STRATK='bal';try{const v=localStorage.getItem('desk-strat');if(STRAT[v])STRATK=v}catch(e){}
 
@@ -544,7 +549,7 @@ let STRATK='bal';try{const v=localStorage.getItem('desk-strat');if(STRAT[v])STRA
 function header(){
  const rng=mk=>{const ds=S.filter(x=>x.m===mk).map(x=>x.d).sort();const lo=ds[0],hi=ds.at(-1),old=ds.filter(d=>d<hi).length;return lo===hi?`close ${fmtD(hi)} (all ${ds.length})`:`closes ${fmtD(lo)}–${fmtD(hi)} (${old} of ${ds.length} older than ${fmtD(hi)})`};
  const snapAge=calDays(SNAP,NOW);
- document.getElementById('asof').innerHTML=`${LIVE?`<span><b>Auto-updated</b> 3× a day from Yahoo Finance · ${S.length} stocks scored</span>`:''}<span>${LIVE?'Data updated':'Snapshot built'} ${esc(SNAP.toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kuala_Lumpur'}))} MYT${snapAge>=1?` · <b>${Math.floor(snapAge)} day${snapAge>=2?'s':''} old</b>`:''}</span><span>US stock prices: ${esc(rng('US'))}</span><span>Bursa stock prices: ${esc(rng('MY'))}</span>`;
+ document.getElementById('asof').innerHTML=`${LIVE?`<span><b>Auto-updated</b> every 15 min in market hours · Bursa ${esc(hhmm(LIVE.mkUpdated&&LIVE.mkUpdated.MY))} · US ${esc(hhmm(LIVE.mkUpdated&&LIVE.mkUpdated.US))} · ${S.length} stocks scored</span>`:''}<span>${LIVE?'Data updated':'Snapshot built'} ${esc(SNAP.toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kuala_Lumpur'}))} MYT${snapAge>=1?` · <b>${Math.floor(snapAge)} day${snapAge>=2?'s':''} old</b>`:''}</span><span>US stock prices: ${esc(rng('US'))}</span><span>Bursa stock prices: ${esc(rng('MY'))}</span>`;
  const ban=document.getElementById('ageBanner');
  if(snapAge>3){ban.hidden=false;ban.textContent=`This snapshot is ${Math.floor(snapAge)} days old. Prices, news and scores may be out of date — the automatic update may have stopped. Check the repository's Actions tab, or ask Claude to refresh it.`}
 }
@@ -655,8 +660,9 @@ function stockFile(t){
  ${M.ind?`<dt>20-day return</dt><dd class="${sgn(M.ind.ret20)}">${pct(M.ind.ret20)}</dd><dt>Volatility (annualised, 20d)</dt><dd>${(M.ind.vol*100).toFixed(0)}%</dd><dt>RSI (14)</dt><dd>${M.ind.rsi.toFixed(0)} <span class="mute">${M.ind.rsi>70?'overbought':M.ind.rsi<30?'oversold':'neutral'}</span></dd>`:`<dt>20-day return, volatility, RSI</dt><dd class="mute">no price history</dd>`}</dl>
  <p class="sm mute">Confidence: ${e.why.length?esc(e.why.join('; ')):'all inputs current and confirmed'}.</p>
  </div></div>
- <h3 style="margin-top:24px">Live chart <span class="mute sm">(TradingView · ${esc(tvSym(x))})</span></h3>
- <div id="tvStock" class="tvbox" style="height:420px"></div>
+ ${tvSym(x)?`<h3 style="margin-top:24px">Live chart <span class="mute sm">(TradingView · ${esc(tvSym(x))})</span></h3>
+ <div id="tvStock" class="tvbox" style="height:420px"></div>`:`<h3 style="margin-top:24px">Price, last ${(H[x.t]||'').split(' ').filter(Boolean).length||0} trading days <span class="mute sm">(Yahoo Finance, refreshed every 15 min in trading hours)</span></h3>
+ ${H[x.t]?'<div class="fig" style="min-height:260px"><svg id="ownChart" role="img" aria-label="Daily closing prices"></svg></div>':'<p class="mute">No price history yet for this stock.</p>'}`}
  <div class="grid2" style="margin-top:24px"><div>
  <h3>News affecting ${esc(x.t)} <span class="mute sm">net score ${M.news.net>0?'+':''}${M.news.net.toFixed(0)}</span></h3>
  <p class="sm mute">Contribution = event score × relevance × recency${news.some(p=>p.e.weak)?' (× 0.5 for secondary sources)':''}. Event scores are AI judgements; the sum is calculated.</p>
@@ -679,7 +685,8 @@ function stockFile(t){
   if(P){g+=mk(P.stop,'Stop '+money(P.stop,x.cur),'var(--dn)',2);g+=mk(P.tgt,'Target '+money(P.tgt,x.cur),'var(--up)',1)}
   g+=`<circle cx="${X(x.p)}" cy="${y}" r="8" fill="var(--ink)" stroke="var(--bg)" stroke-width="2"/><text x="${X(x.p)}" y="${y+54}" text-anchor="${anc(x.p)}" font-size="13" font-weight="800" fill="var(--ink)">Now ${money(x.p,x.cur)}</text>`;
   r.innerHTML=g};
- tvWidget(document.getElementById('tvStock'),'advanced-chart',{autosize:true,symbol:tvSym(x),interval:'D',timezone:'Asia/Kuala_Lumpur',theme:dark()?'dark':'light',style:'1',allow_symbol_change:false,hide_top_toolbar:false,support_host:'https://www.tradingview.com'});
+ if(!tvSym(x)&&H[x.t]){const sv=document.getElementById('ownChart'),cl=H[x.t].split(' ').filter(Boolean).map(Number).reverse();const dw=()=>{const W=sv.clientWidth,H2=sv.clientHeight;if(!W)return;const mn=Math.min(...cl),mx=Math.max(...cl),pd=(mx-mn)*.1||mn*.02,lo2=mn-pd,hi2=mx+pd,pl=56,pr=16,pt=12,pb=24,X=i=>pl+(W-pl-pr)*i/(cl.length-1),Y=v=>pt+(H2-pt-pb)*(1-(v-lo2)/(hi2-lo2));let g='';for(let i=0;i<=4;i++){const v=lo2+(hi2-lo2)*i/4;g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${pl-6}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="var(--mute)">${v.toFixed(v<10?3:2)}</text>`}const col=cl.at(-1)>=cl[0]?'var(--up)':'var(--dn)';g+=`<polyline fill="none" stroke="${col}" stroke-width="2.5" points="${cl.map((v,i)=>X(i)+','+Y(v)).join(' ')}"/><circle cx="${X(cl.length-1)}" cy="${Y(cl.at(-1))}" r="4" fill="${col}"/><text x="${pl}" y="${H2-6}" font-size="12" fill="var(--mute)">${cl.length} trading days ago</text><text x="${W-pr}" y="${H2-6}" text-anchor="end" font-size="12" fill="var(--mute)">latest</text>`;sv.innerHTML=g};if(window.__oro)window.__oro.disconnect();window.__oro=new ResizeObserver(dw);window.__oro.observe(sv)}
+ if(tvSym(x))tvWidget(document.getElementById('tvStock'),'advanced-chart',{autosize:true,symbol:tvSym(x),interval:'D',timezone:'Asia/Kuala_Lumpur',theme:dark()?'dark':'light',style:'1',allow_symbol_change:false,hide_top_toolbar:false,support_host:'https://www.tradingview.com'});
  if(window.__rro)window.__rro.disconnect();window.__rro=new ResizeObserver(dr);window.__rro.observe(r);
 }
 
@@ -744,16 +751,21 @@ const dark=()=>{const t=document.documentElement.dataset.theme;return t?t==='dar
 function tvWidget(box,kind,cfg){if(!box)return;box.innerHTML='';const c=document.createElement('div');c.className='tradingview-widget-container';c.style.height='100%';c.style.width='100%';const w=document.createElement('div');w.className='tradingview-widget-container__widget';w.style.height='100%';c.appendChild(w);
  const sc=document.createElement('script');sc.src='https://s3.tradingview.com/external-embedding/embed-widget-'+kind+'.js';sc.async=true;sc.textContent=JSON.stringify(Object.assign({locale:'en',colorTheme:dark()?'dark':'light',isTransparent:false},cfg));c.appendChild(sc);box.appendChild(c);
  setTimeout(()=>{if(!box.querySelector('iframe'))box.innerHTML='<p class="tvfail">The live TradingView view could not load here. It works on the website version of this dashboard (GitHub Pages) with an internet connection.</p>'},8000)}
-let liveDone=false,chartSym='FTSEMYX:FBMKLCI',scrMk='malaysia';
+let liveDone=false,chartSym='NASDAQ:NVDA',scrMk='america';
 function liveChart(){tvWidget(document.getElementById('tvChart'),'advanced-chart',{autosize:true,symbol:chartSym,interval:'D',timezone:'Asia/Kuala_Lumpur',theme:dark()?'dark':'light',style:'1',allow_symbol_change:true,hide_side_toolbar:false,support_host:'https://www.tradingview.com'})}
 function liveScreener(){tvWidget(document.getElementById('tvScreener'),'screener',{width:'100%',height:'100%',defaultColumn:'overview',defaultScreen:'most_capitalized',market:scrMk,showToolbar:true})}
 function liveView(){if(liveDone)return;liveDone=true;
- tvWidget(document.getElementById('tvTape'),'ticker-tape',{symbols:[{proName:'FOREXCOM:SPXUSD',title:'S&P 500'},{proName:'FOREXCOM:NSXUSD',title:'Nasdaq 100'},{proName:'FTSEMYX:FBMKLCI',title:'FBM KLCI'},{proName:'FX_IDC:USDMYR',title:'USD/MYR'},{proName:'TVC:UKOIL',title:'Brent'},...S.slice(0,20).map(x=>({proName:tvSym(x),title:x.t}))],showSymbolLogo:true,displayMode:'adaptive'});
- const picks=[['FBM KLCI','FTSEMYX:FBMKLCI'],['S&P 500','FOREXCOM:SPXUSD'],...S.slice(0,20).map(x=>[x.t,tvSym(x)]),['NATGATE','MYX:NATGATE']];
+ tvWidget(document.getElementById('tvTape'),'ticker-tape',{symbols:[{proName:'FOREXCOM:SPXUSD',title:'S&P 500'},{proName:'FOREXCOM:NSXUSD',title:'Nasdaq 100'},{proName:'FX_IDC:USDMYR',title:'USD/MYR'},{proName:'TVC:UKOIL',title:'Brent'},...S.filter(x=>x.m==='US').slice(0,12).map(x=>({proName:tvSym(x),title:x.t}))],showSymbolLogo:true,displayMode:'adaptive'});
+ const picks=[['S&P 500','FOREXCOM:SPXUSD'],['Nasdaq 100','FOREXCOM:NSXUSD'],...S.filter(x=>x.m==='US').map(x=>[x.t,tvSym(x)])];
  document.getElementById('tvPicks').innerHTML=picks.map(([l,v])=>`<button type="button" class="sm" data-sym="${esc(v)}" aria-pressed="${v===chartSym}">${esc(l)}</button>`).join('');
  document.getElementById('tvPicks').addEventListener('click',ev=>{const b=ev.target.closest('[data-sym]');if(!b)return;chartSym=b.dataset.sym;document.querySelectorAll('#tvPicks [data-sym]').forEach(o=>o.setAttribute('aria-pressed',o===b));liveChart()});
- document.querySelectorAll('[data-scr]').forEach(b=>b.addEventListener('click',()=>{scrMk=b.dataset.scr;document.querySelectorAll('[data-scr]').forEach(o=>o.setAttribute('aria-pressed',o===b));liveScreener()}));
- liveChart();liveScreener()}
+ document.getElementById('bSort').addEventListener('change',board);
+ board();liveChart();liveScreener()}
+const hhmm=iso=>iso?new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kuala_Lumpur'})+' MYT':'';
+function board(){const so=document.getElementById('bSort').value;const L=S.filter(x=>x.m==='MY').map(x=>({x,e:evaluate(x,STRATK)}));
+ const k={ch:r=>-Math.abs(r.x.ch),up:r=>-r.x.ch,dn:r=>r.x.ch,t:r=>0,score:r=>-(r.e.score??-1)}[so];L.sort((a,b)=>so==='t'?a.x.t.localeCompare(b.x.t):k(a)-k(b));
+ document.getElementById('myUpd').textContent=LIVE&&LIVE.mkUpdated&&LIVE.mkUpdated.MY?`· updated ${hhmm(LIVE.mkUpdated.MY)} · ${new Date(LIVE.mkUpdated.MY).toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'Asia/Kuala_Lumpur'})}`:'· built-in snapshot';
+ document.getElementById('bBoard').innerHTML=`<thead><tr><th>Stock</th><th class="n">Price</th><th class="n">Change</th><th>Score</th><th>Label</th></tr></thead><tbody>${L.map(({x,e})=>`<tr class="row" tabindex="0" data-t="${esc(x.t)}"><td><b>${esc(x.t)}</b> <span class="sm mute">${esc(x.n)}</span></td><td class="n">${money(x.p,x.cur)}</td><td class="n ${sgn(x.ch)}">${x.ch>=0?'+':''}${x.ch.toFixed(2)}%</td><td style="min-width:120px">${e.bad?'':scoreCell(e.score)}</td><td>${e.bad?'':`<span class="cls c-${e.cc}">${esc(e.cls)}</span>`}</td></tr>`).join('')}</tbody>`}
 
 /* ================= ROUTER ================= */
 function route(){const h=(location.hash||'#command').slice(1);let v=h.startsWith('stock-')?'stock':h;if(!['command','live','screener','stock','news','ask','method'].includes(v))v='command';
@@ -762,6 +774,9 @@ function route(){const h=(location.hash||'#command').slice(1);let v=h.startsWith
  if(v==='live')liveView();if(v==='screener')screener();if(v==='stock')stockFile(h.slice(6));if(v==='news')newsView();if(v==='command'){topTable();draw()}
  window.scrollTo(0,0)}
 header();kpis();topTable();screener();newsView();addEventListener('hashchange',route);route();
+// check for newer data every 5 minutes and offer a one-tap refresh
+if(LIVE)setInterval(async()=>{try{const r=await fetch('data/desk.json',{cache:'no-store'});if(!r.ok)return;const J=await r.json();if(J.updated&&J.updated!==LIVE.updated){const nb=document.getElementById('newData');nb.hidden=false;nb.innerHTML=`New prices are in (updated ${esc(hhmm(J.updated))}). <button type="button" class="pri" onclick="location.reload()">Refresh now</button>`;
+ const ab=document.getElementById('ageBanner');ab.hidden=false;ab.innerHTML=`New prices are in (updated ${esc(hhmm(J.updated))}) — <a href="javascript:location.reload()" style="color:inherit">tap to refresh</a>`}}catch(e){}},300000);
 window.__desk={evaluate,S,ALL,metricsRaw,buildAll,US,MY};
 }
 (async()=>{try{const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),6000);const r=await fetch('data/desk.json',{cache:'no-store',signal:ctl.signal});clearTimeout(tm);if(r.ok)mergeLive(await r.json())}catch(e){}

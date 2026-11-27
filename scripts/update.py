@@ -141,25 +141,67 @@ def stock(page_t: str, ysym: str, tv: str, m: str, sec: str, kw: str):
     }
 
 
+MY_IDX = {"FBM KLCI", "USD/MYR"}
+
+
+def pick_market(now: datetime) -> str:
+    """MY during Bursa hours, US during US hours, else ALL. Override with argv[1]."""
+    if len(sys.argv) > 1 and sys.argv[1].upper() in {"US", "MY", "ALL"}:
+        return sys.argv[1].upper()
+    h = now.hour  # UTC
+    if 0 <= h <= 10:      # 8am–6pm MYT
+        return "MY"
+    if 13 <= h <= 22:     # 9pm–6am MYT (US session incl. pre/after)
+        return "US"
+    return "ALL"
+
+
 def main() -> int:
     now = datetime.now(timezone.utc)
-    out = {"updated": now.isoformat(timespec="seconds").replace("+00:00", "Z"), "source": "Yahoo Finance via yfinance (delayed / end-of-day)", "stocks": [], "idx": {}, "series": {}, "skipped": []}
-    for t, sec, kw in US:
+    mk = pick_market(now)
+    print(f"Updating market: {mk}")
+    prev = {}
+    if OUT.exists():
+        try:
+            prev = json.loads(OUT.read_text())
+        except Exception:
+            prev = {}
+    out = {"updated": now.isoformat(timespec="seconds").replace("+00:00", "Z"), "source": "Yahoo Finance via yfinance (delayed ~15 min / end-of-day)", "stocks": [], "idx": {}, "series": {}, "skipped": [], "mkUpdated": dict(prev.get("mkUpdated") or {})}
+    # keep the other market's data from the previous file
+    if mk != "ALL":
+        out["stocks"] = [r for r in prev.get("stocks", []) if r and r.get("m") != mk]
+        for k, v in (prev.get("idx") or {}).items():
+            if (k in MY_IDX) != (mk == "MY"):
+                out["idx"][k] = v
+                if k in (prev.get("series") or {}):
+                    out["series"][k] = prev["series"][k]
+    fresh = []
+    for t, sec, kw in (US if mk in ("US", "ALL") else []):
         r = stock(t, t, ("NYSE:" if t in {"JPM", "LLY", "KO", "TSM", "BRK-B", "V", "MA", "BAC", "UNH", "JNJ", "XOM", "CVX", "WMT", "PG", "HD", "ORCL", "CRM"} else "NASDAQ:") + t.replace("-", "."), "US", sec, kw)
-        (out["stocks"] if r else out["skipped"]).append(r or t)
+        (fresh if r else out["skipped"]).append(r or t)
         time.sleep(0.4)
-    for t, code, sec, kw in MY:
+    for t, code, sec, kw in (MY if mk in ("MY", "ALL") else []):
         r = stock(t, f"{code}.KL", f"MYX:{t}", "MY", sec, kw)
-        (out["stocks"] if r else out["skipped"]).append(r or t)
+        (fresh if r else out["skipped"]).append(r or t)
         time.sleep(0.4)
+    # a stock that failed this time keeps its previous data rather than vanishing
+    got = {r["t"] for r in fresh}
+    for r in prev.get("stocks", []):
+        if r and r.get("t") in out["skipped"] and r["t"] not in got and (mk == "ALL" or r.get("m") == mk):
+            fresh.append(r)
+    out["stocks"] += fresh
     for name, ysym in INDEX.items():
+        if mk != "ALL" and (name in MY_IDX) != (mk == "MY"):
+            continue
         h = closes(ysym, "2mo")
         if len(h) >= 2:
             d, v = h[-1]
             out["idx"][name] = {"v": round(v, 4), "c": round((v / h[-2][1] - 1) * 100, 2), "d": d}
             out["series"][name] = h[-25:]
         time.sleep(0.4)
-    if len(out["stocks"]) < 10:
+    for m in (["US", "MY"] if mk == "ALL" else [mk]):
+        out["mkUpdated"][m] = out["updated"]
+    if len([r for r in fresh if r.get("p")]) < 5:
         print("Too few stocks fetched; not overwriting the data file.", file=sys.stderr)
         return 1
     OUT.parent.mkdir(parents=True, exist_ok=True)

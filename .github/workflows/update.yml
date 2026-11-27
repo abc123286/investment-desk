@@ -2,11 +2,14 @@ name: Update data
 
 on:
   schedule:
-    # Times are UTC. MYT = UTC+8.
-    - cron: "45 4 * * 1-5"    # 12:45pm MYT — Bursa midday break
-    - cron: "20 9 * * 1-5"    # 5:20pm MYT — after Bursa close
-    - cron: "40 21 * * 1-5"   # 5:40am MYT (Tue–Sat) — after US close
-  workflow_dispatch: {}       # "Run workflow" button for a manual refresh
+    # Times are UTC. MYT = UTC+8. GitHub may start scheduled runs a few minutes late.
+    - cron: "*/15 1-9 * * 1-5"    # every 15 min, 9:00am–5:45pm MYT — Bursa prices
+    - cron: "*/15 14-21 * * 1-5"  # every 15 min, 10:00pm–5:45am MYT — US prices
+  workflow_dispatch:
+    inputs:
+      market:
+        description: "Which market to refresh (ALL, US or MY)"
+        default: "ALL"
 
 permissions:
   contents: write
@@ -18,14 +21,15 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
       - run: pip install -r requirements.txt
-      - run: python scripts/update.py
+      - run: python scripts/update.py ${{ github.event.inputs.market || '' }}
       - name: Commit new data
         run: |
           git config user.name "investment-desk-bot"
@@ -33,4 +37,5 @@ jobs:
           git add docs/data/desk.json
           if git diff --cached --quiet; then echo "No changes"; exit 0; fi
           git commit -m "Data update $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git pull --rebase origin main || true
           git push
