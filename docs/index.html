@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>US & Bursa Investment Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a research desk's morning sheet — sober, exact, every number dated and sourced.
+   IDEA: a survey chart of two markets; the screener is the legend, each stock a plotted position.
+   PICTURE: the index chart up top; in each stock file, a range bar marking stop, entry, price and target.
+   COLOUR and TYPE: land #fbfbf2, sea #bfe3ee panels, ink #13242e, contour brown for grid, magenta for the plan; Overpass 800/400.
+   LAYOUT: sticky section row, mood buttons and KPI strip, chart + mood details side by side, then tables and files. */
+:root{color-scheme:light dark;
+--bg:light-dark(#fbfbf2,#0d1c24);--ink:light-dark(#13242e,#e4edef);--mute:light-dark(#4d5f68,#9fb3ba);
+--sea:light-dark(#bfe3ee,#123341);--sea2:light-dark(#e3f2f6,#0f2731);--line:light-dark(#d9d4c2,#24404c);
+--brown:light-dark(#a8551b,#d9925c);--mag:light-dark(#d6127e,#ff5cae);--onmag:light-dark(#fff,#1b0712);--up:light-dark(#17724a,#55cf90);--dn:light-dark(#b8213f,#ff7a90);--warn:light-dark(#8a5a00,#f0c060)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Overpass,system-ui,sans-serif;overflow-x:clip;font-variant-numeric:tabular-nums}
+.band{padding:clamp(20px,3vw,44px) max(4vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font-weight:800;font-size:clamp(28px,4vw,44px);line-height:1.05;margin:0 0 10px;text-wrap:balance}
+h2{font-weight:800;font-size:24px;line-height:1.15;margin:0 0 12px;text-wrap:balance}
+h3{font-weight:800;font-size:17px;margin:0 0 8px}
+p{margin:0 0 10px;max-width:70ch}
+a{color:inherit;text-decoration-color:var(--brown);text-underline-offset:3px}
+.mute{color:var(--mute)}.sm{font-size:13.5px}.up{color:var(--up)}.dn{color:var(--dn)}.wn{color:var(--warn)}
+.nav{position:sticky;top:0;z-index:5;background:var(--ink);color:var(--bg);display:flex;gap:4px;padding:6px max(4vw,16px);overflow-x:auto}
+.nav a{flex:none;color:var(--bg);text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600;font-size:15px;min-height:44px;display:flex;align-items:center}
+.nav a[aria-current=page]{background:var(--mag);color:var(--onmag)}
+.nav a.brand{gap:10px;padding:6px 18px 6px 0;margin-right:6px;border-right:1px solid color-mix(in srgb,var(--bg) 25%,transparent);border-radius:0}
+.brand .bname{display:grid;line-height:1.05;font-weight:600;font-size:15px}.brand .bname b{font-weight:800;font-size:17px}.brand .bname small{font-size:11.5px;opacity:.75;font-weight:600}
+.brand .bname{grid-template-columns:auto}.brand .bname b{margin-top:-1px}
+.kicker{font-size:13px;font-weight:600;color:var(--mute);margin:0 0 6px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+a:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible,tr:focus-visible,summary:focus-visible{outline:3px solid var(--mag);outline-offset:2px}
+.top{background:var(--sea)}
+.asof{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:14px;color:var(--mute)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:13.5px;font-weight:600;background:var(--bg);border:1px solid var(--line);white-space:nowrap;color:var(--ink)}
+a.chip{min-height:32px}
+.banner{background:var(--warn);color:light-dark(#fff,#1d1400);padding:10px max(4vw,16px);font-weight:600;font-size:15px}
+.regrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.regbtn{display:flex;flex-wrap:wrap;max-width:100%;align-items:center;gap:6px 10px;text-align:left;background:var(--bg);border:2px solid var(--ink);border-radius:10px;padding:8px 14px;min-height:52px}
+.regbtn .lab{display:block;font-size:12.5px;color:var(--mute);font-weight:600}
+.regbtn .val{display:block;font-weight:800;font-size:16px}
+.regbtn .why{font-size:13.5px;font-weight:600;color:var(--mag);white-space:nowrap;text-decoration:underline;text-underline-offset:3px}
+.regbtn .dot{width:12px;height:12px;border-radius:50%;flex:none}
+.regbtn[aria-expanded=true]{background:var(--ink);color:var(--bg)}.regbtn[aria-expanded=true] .lab,.regbtn[aria-expanded=true] .why{color:var(--bg)}
+.regx{margin-top:12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:16px 18px;max-width:820px}
+.regx .ana{font-style:italic;color:var(--mute)}.regx ul{margin:6px 0 10px;padding-left:18px}.regx .close{float:right;min-height:36px;padding:4px 12px;font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-top:18px;padding:1px}
+.kpi{background:var(--bg);padding:10px 12px;outline:1px solid var(--line)}
+.kpi b{display:block;font-size:22px;font-weight:800;white-space:nowrap}
+.kpi>span{font-size:13px;color:var(--mute);display:block}
+.grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
+@media(max-width:900px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--sea2);border:1px solid var(--line);border-radius:8px;padding:16px}
+.fig{position:relative;min-height:320px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.fig.rng{min-height:0;height:136px;margin:10px 0 4px}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+button,select,input{font:inherit;font-size:16px;min-height:44px;padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+button{cursor:pointer}
+button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.pri{background:var(--mag);border-color:var(--mag);color:var(--onmag);font-weight:600}
+button:disabled{opacity:.5;cursor:not-allowed}
+ul.ev{margin:0;padding-left:18px}ul.ev li{margin-bottom:6px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th{text-align:left;font-weight:600;font-size:13px;color:var(--mute);border-bottom:2px solid var(--ink);padding:8px}
+td{border-bottom:1px solid var(--line);padding:9px 8px;vertical-align:middle}
+td.n,th.n{text-align:right;white-space:nowrap}
+tbody tr.row{cursor:pointer}tbody tr.row:hover{background:var(--sea2)}
+.bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden;min-width:70px}.bar i{display:block;height:100%;background:var(--ink)}
+.cls{font-size:13px;font-weight:600;padding:3px 8px;border-radius:4px;white-space:nowrap;border:1px solid currentColor}
+.c-buy{color:var(--up)}.c-hold{color:var(--brown)}.c-watch{color:var(--warn)}.c-sell{color:var(--dn)}
+.stale{color:var(--warn);font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:14px}
+.filters label{font-size:13px;color:var(--mute);display:grid;gap:4px}
+.news{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.score{font-weight:800;font-size:20px;text-align:center;border-radius:6px;padding:6px 0;align-self:start}
+.s-pos{background:color-mix(in srgb,var(--up) 16%,transparent);color:var(--up)}.s-neg{background:color-mix(in srgb,var(--dn) 16%,transparent);color:var(--dn)}.s-neu{background:var(--sea2);color:var(--mute)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.file{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media(max-width:800px){.file{grid-template-columns:minmax(0,1fr)}}
+.big{font-size:clamp(30px,5vw,48px);font-weight:800;line-height:1}
+.brk{display:grid;gap:8px}.brk div{display:grid;grid-template-columns:10em minmax(0,1fr) 3em;gap:8px;align-items:center;font-size:14px}
+.kv{display:grid;grid-template-columns:auto auto;gap:4px 16px;font-size:15px}.kv dt{color:var(--mute)}.kv dd{margin:0;text-align:right}
+.chat{display:grid;gap:10px;max-height:60vh;overflow:auto;padding:4px}
+.msg{padding:10px 14px;border-radius:8px;white-space:pre-wrap;max-width:80ch}
+.msg.u{background:var(--ink);color:var(--bg);justify-self:end}.msg.a{background:var(--sea2);border:1px solid var(--line)}
+textarea{font:inherit;font-size:16px;width:100%;min-height:80px;padding:10px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.warnbox{border-left:4px solid var(--warn);padding:10px 14px;background:var(--sea2);margin:10px 0;font-size:14.5px}
+.sizer{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end;margin-top:8px}
+.sizer label{font-size:13px;color:var(--mute);display:grid;gap:4px}
+details.data{margin-top:8px;max-width:100%;overflow-x:auto}details.data summary{cursor:pointer;font-size:14px;font-weight:600;min-height:32px}
+.view{display:none}.view.on{display:block}
+.tvbox{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}.tvbox .tvfail{padding:16px;font-size:14px;color:var(--mute)}
+footer{border-top:1px solid var(--line);padding:16px max(4vw,16px) 28px;font-size:13.5px;color:var(--mute)}
+pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}html{scroll-padding-top:72px}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mute)}.stack td:empty{display:none}.brk div{grid-template-columns:7.5em minmax(0,1fr) 2.5em}}
+@media(prefers-reduced-motion:no-preference){.bar i{transition:width .5s ease}}
+</style><script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script></head><body>
+
+<nav class="nav" aria-label="Sections">
+<a href="#command" class="brand" aria-label="Investment Desk home"><svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="7" fill="var(--mag)"/><path d="M7 21 L13 15 L17 18 L25 9" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="9" r="2.6" fill="#fff"/><path d="M7 25 H25" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round"/></svg><span class="bname">Investment<b>Desk</b><small>US · Bursa</small></span></a><a href="#command">Command centre</a><a href="#live">Live market</a><a href="#screener">Screener</a><a href="#news">News &amp; alerts</a><a href="#ask">Ask AI</a><a href="#method">Method &amp; sources</a>
+</nav>
+<div id="ageBanner" class="banner" hidden></div>
+
+<!-- COMMAND CENTRE -->
+<section id="v-command" class="view">
+<div class="band top"><div class="wrap">
+<p class="kicker"><span>Today’s market in one line</span><span class="mute">— the main story behind the numbers below</span></p>
+<h1>A high-volatility correction: AI stocks lead the slide, Malaysian banks hold the KLCI up</h1>
+<div class="asof" id="asof"></div>
+<div class="regrow" id="regchips"></div>
+<div id="regExplain" class="regx" hidden tabindex="-1"></div>
+<div class="kpis" id="kpis"></div>
+</div></div>
+<div class="band"><div class="wrap grid2">
+<div>
+<h2 id="chartTitle">US indices</h2>
+<div class="seg" role="group" aria-label="Chart">
+<button data-ch="us" aria-pressed="true">US indices</button><button data-ch="klci" aria-pressed="false">FBM KLCI</button><button data-ch="vix" aria-pressed="false">VIX</button>
+</div>
+<div class="fig" id="fig"><svg id="chart" role="img" aria-labelledby="chartTitle"></svg></div>
+<p class="sm mute" id="chartNote"></p>
+<details class="data"><summary>Show chart data as a table</summary><div class="scroll" style="max-width:calc(100vw - 32px)"><table id="chartTable" class="sm"></table></div></details>
+</div>
+<aside class="panel" id="moodPanel">
+<h3>Market mood: the full details</h3>
+<div id="regime"></div>
+<h3 style="margin-top:16px">Cross-market read</h3>
+<ul class="ev sm" id="cross"></ul>
+</aside>
+</div></div>
+<div class="band" style="padding-top:0"><div class="wrap grid2">
+<div><h2>Top-ranked stocks</h2>
+<div class="filters"><label>Strategy<select id="hStrat" class="stratSel"></select></label></div>
+<div class="scroll"><table class="stack" id="topTable"></table></div>
+<p class="sm"><a href="#screener">Open the full screener</a> for all 20 stocks and filters.</p></div>
+<div><h2>Critical alerts</h2><div class="news" id="alerts"></div>
+<h3 style="margin-top:18px">Coming up</h3><div class="scroll"><table class="stack" id="cal"></table></div></div>
+</div></div>
+</section>
+
+<!-- LIVE -->
+<section id="v-live" class="view"><div class="band"><div class="wrap">
+<h2>Live market</h2>
+<p class="mute">Look up any US or Bursa stock. Charts and quotes come straight from TradingView; Bursa prices are usually delayed by about 15 minutes, US prices are near real-time or slightly delayed. These live views are separate from the scores, which update three times a day.</p>
+<div id="tvTape" class="tvbox" style="min-height:46px"></div>
+<h3 style="margin-top:18px">Chart any stock</h3>
+<p class="sm mute">Type a name or code in the chart's search box (top left of the chart), e.g. <b>MYX:NATGATE</b>, <b>MYX:1155</b> or <b>NASDAQ:AMD</b>. Or tap a quick pick:</p>
+<div class="seg" id="tvPicks"></div>
+<div id="tvChart" class="tvbox" style="height:560px"></div>
+<h3 style="margin-top:22px">Screen the whole market</h3>
+<div class="seg" role="group" aria-label="Screener market"><button type="button" data-scr="malaysia" aria-pressed="true">Bursa Malaysia (all stocks)</button><button type="button" data-scr="america" aria-pressed="false">US (all stocks)</button></div>
+<div id="tvScreener" class="tvbox" style="height:620px"></div>
+<p class="sm mute" id="tvNote" style="margin-top:8px">Live widgets by TradingView. They load only on the website version of this dashboard; inside Claude they are blocked.</p>
+</div></div></section>
+
+<!-- SCREENER -->
+<section id="v-screener" class="view"><div class="band"><div class="wrap">
+<h2>AI stock screener</h2>
+<p class="mute">Every stock is scored 0–100 by the same formulas in this page's code; the strategy only changes the weights. Click a row for the full file.</p>
+<div class="filters">
+<label>Strategy<select id="fStrat" class="stratSel"></select></label>
+<label>Market<select id="fMkt"><option value="ALL">US + Bursa</option><option value="US">US only</option><option value="MY">Bursa only</option></select></label>
+<label>Sector<select id="fSec"><option value="ALL">All sectors</option></select></label>
+<label>Minimum score<select id="fMin"><option value="0">Any</option><option value="47">47+ (Hold or better)</option><option value="55">55+ (Accumulate or better)</option><option value="62">62+ (Buy or better)</option></select></label>
+<label>Sort by<select id="fSort"><option value="score">Score</option><option value="up">Analyst upside</option><option value="yld">Dividend yield</option><option value="fpe">Forward P/E (low first)</option><option value="conf">Data confidence</option></select></label>
+</div>
+<p class="sm" id="stratNote"></p>
+<div class="scroll"><table class="stack" id="scrTable"></table></div>
+</div></div></section>
+
+<!-- STOCK FILE -->
+<section id="v-stock" class="view"><div class="band"><div class="wrap" id="stockFile"></div></div></section>
+
+<!-- NEWS -->
+<section id="v-news" class="view"><div class="band"><div class="wrap">
+<h2>News intelligence</h2>
+<p class="mute">Each event appears once, however many outlets covered it. Its −100 to +100 impact score is an AI judgement (Claude's reading of the linked reports). A stock's news score is then calculated in code from the events tagged to it, weighted by how directly each one hits it and by how recent it is.</p>
+<div class="filters">
+<label>Market<select id="nMkt"><option value="ALL">All</option><option value="US">US</option><option value="MY">Malaysia</option></select></label>
+<label>Impact<select id="nImp"><option value="ALL">All</option><option value="NEG">Negative only</option><option value="POS">Positive only</option><option value="BIG">Big moves (|score| ≥ 40)</option></select></label>
+</div>
+<div class="news" id="newsList"></div>
+</div></div></section>
+
+<!-- ASK -->
+<section id="v-ask" class="view"><div class="band"><div class="wrap">
+<h2>Ask AI about this snapshot</h2>
+<p class="mute">The AI (Claude) answers from the data on this page only: prices, sub-scores, weights, confidence reasons, trade plans, news and macro. It says when something isn't in the data. For fresh data, ask in the chat to refresh the dashboard.</p>
+<div class="seg" id="prompts"></div>
+<div class="chat" id="chat" aria-live="polite"></div>
+<form id="askForm" style="margin-top:10px;display:grid;gap:8px">
+<label for="q" class="sm mute">Your question (Enter to send, Shift+Enter for a new line)</label>
+<textarea id="q" placeholder="e.g. Why does CIMB score higher than Maybank under the Dividend strategy?"></textarea>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" type="submit" id="askBtn">Ask</button><button type="button" id="clearBtn">Clear chat</button></div>
+</form>
+<p class="sm mute" id="askStatus"></p>
+</div></div></section>
+
+<!-- METHOD -->
+<section id="v-method" class="view"><div class="band"><div class="wrap">
+<h2>Method, data status and sources</h2>
+<div class="grid2">
+<div>
+<h3>What is calculated, and what is judged</h3>
+<p><b>Calculated in this page's code</b> (deterministic, from the sourced figures): every sub-score, the overall score, data confidence, labels, market-mood labels, the trade plan and position size, and each stock's net news score.</p>
+<p><b>Judged by AI</b> (Claude, when the snapshot was built): the −100…+100 impact score of each news event, how directly each event hits each tagged stock (relevance 0.2–1), catalyst and risk wording. These are labelled where they appear.</p>
+<h3>Sub-scores</h3>
+<p>Valuation, analyst upside, income and stability blend an absolute scale (50%) with the stock's rank within its own market (50%), so US and Bursa stocks are not judged on one scale. Sector-relative ranking needs a bigger universe than two or three peers per sector, so it is not used yet.</p>
+<ul class="ev">
+<li><b>Valuation</b>: forward earnings yield (1 ÷ forward P/E at today's price). 2% = 0, 12% = 100.</li>
+<li><b>Analyst upside</b>: consensus target ÷ price − 1. 0% = 0, 40%+ = 100.</li>
+<li><b>Growth</b>: implied next-year EPS growth (trailing P/E ÷ forward P/E − 1). −5% = 0, +35% = 100. Values below −25% or above +60% usually reflect one-off gains or accounting differences, so they are marked unreliable and left out of the score.</li>
+<li><b>Momentum</b>: 20-trading-day price return where 30 days of closes were available (−20% = 0, +20% = 100). Otherwise, position in the 52-week range, marked "proxy".</li>
+<li><b>Pullback</b> (Value strategy): 100 − momentum.</li>
+<li><b>Income</b>: dividend yield; 6%+ = 100.</li>
+<li><b>Stability</b>: annualised volatility of daily returns over 20 days (15% = 100, 80% = 0). Otherwise, 52-week range ÷ price, marked "proxy".</li>
+<li><b>News</b>: sum of (event score × relevance × recency), recency halving every 14 days, capped at ±100, then mapped to 0–100.</li>
+</ul>
+<p>Any sub-score that can't be calculated is left out and the remaining weights are scaled up to 100%. If less than half the strategy's weight can be calculated, the stock gets no score.</p>
+<h3>Labels</h3>
+<p>Scores are rounded to whole numbers, then labelled: 70+ Strong Buy Candidate (needs confidence 75+), 62+ Buy Candidate, 55+ Accumulate, 47+ Hold, 40+ Watchlist, 33+ Reduce, below 33 Avoid. 50 is neutral. These bands are judgement, <b>not backtested</b>; backtesting needs a price-history feed this page doesn't have.</p>
+<p>The label is capped at Watchlist when the price is more than five trading days old, data confidence is below 60, a recent event scores −60 or worse for the stock, or an unresolved event risk is flagged.</p>
+<h3>Data confidence</h3>
+<p>Separate from attractiveness. Starts at 100: −6 per trading day of price age beyond two; −10 if the price has only one source; −10 if valuation inputs are over 30 days old; −15 if forward P/E or target is missing; −5 each for proxy momentum/volatility, unreliable growth, a price outside its stored 52-week range, or fewer than 10 analysts; −10 for US stocks under Growth &amp; momentum while the US mood is high-volatility.</p>
+<h3>Trade plan</h3>
+<p>Stop distance = 1.5 × daily volatility × √10 (about a 10-day move), kept between 5% and 15%; without price history, 20% of 52-week range ÷ price, kept between 6% and 15%. Entry zone = price down to price × (1 − stop distance ÷ 3). Stop = entry midpoint × (1 − stop distance). Reward/risk is measured from the entry midpoint. Prices snap to Bursa tick sizes (0.5 sen under RM1, 1 sen to RM9.99, 2 sen to RM99.98, 10 sen above) or US cents. Below 1.5 : 1 reward/risk the plan is shown but marked not worth taking. Position size = (account × risk %) ÷ (entry − stop), in 100-share board lots for Bursa.</p>
+<h3>Website version: automatic data</h3>
+<p>On the website, prices, 52-week ranges, P/E, analyst targets and 30-day closes for every scored stock are refreshed three times a day from Yahoo Finance (through the open-source yfinance tool, run by a scheduled GitHub Action). That is one source, so each price loses 10 confidence points; if Yahoo lacks a forward P/E or target, that part is left out. Company codes are checked against Yahoo's company name so a wrong code can't show the wrong company. Live charts and the whole-market screener come from TradingView widgets. News scores still come from the researched event list.</p>
+<h3>Not in this snapshot</h3>
+<p>MACD, moving averages, volume indicators, candlestick patterns, ROE/margins, DCF valuations and backtests. Momentum, volatility and RSI are calculated only for the 11 stocks with 30 days of closes.</p>
+</div>
+<div>
+<h3>Data status legend</h3>
+<ul class="ev">
+<li><b>EOD</b>: end-of-day close, two trading days old or less.</li>
+<li><span class="stale">Stale</span>: older than two trading days. Confidence drops 6 points a day; after five days the label is capped at Watchlist.</li>
+<li><b>2 sources</b> / <b>1 source</b>: whether the closing price was confirmed by a second independent page.</li>
+<li>Ages are measured from each market's close (4pm New York, 5pm Kuala Lumpur) to your device's clock now.</li>
+</ul>
+<h3>Sources</h3>
+<ul class="ev sm" id="srcList"></ul>
+</div>
+</div>
+</div></div></section>
+
+<footer><div class="wrap"><b>Not financial advice.</b> This is a research aid. Labels such as "Buy Candidate", entry zones and stops are formula outputs, not recommendations or instructions to trade. Prices are end-of-day, not real time. Check the latest price and the company's filings before acting. If you share this page publicly, check the Securities Commission Malaysia's rules on investment advice first.</div></footer>
+
+<script>
+{
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const NOW=window.__NOW?new Date(window.__NOW):new Date();
+let SNAP=new Date('2026-11-27T02:00:00Z'); // snapshot built 27 Nov 2026 10:00 MYT
+let FX=4.1135; // USD/MYR, Bernama 6pm 26 Nov 2026
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const ok=v=>typeof v==='number'&&isFinite(v);
+const pos=v=>ok(v)&&v>0;
+const DAY=864e5;
+// close timestamps: US 4pm New York (EST in Nov = 21:00 UTC), Bursa 5pm KL (09:00 UTC)
+const closeTs=(d,m)=>new Date(d+(m==='US'?'T21:00:00Z':'T09:00:00Z'));
+function bizDays(from,to){let n=0,t=new Date(from.getTime());while(true){t=new Date(t.getTime()+DAY);if(t>to)break;const w=t.getUTCDay();if(w!==0&&w!==6)n++}return n}
+const calDays=(a,b)=>(b-a)/DAY;
+const fmtD=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});
+const fmtDY=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
+
+/* ================= DATA ================= */
+const IDX=[
+{k:'S&P 500',v:7182.78,c:-0.25,d:'25 Nov',u:'https://portfolio-terminal.com/markets/stock-market-close',x:'fell as much as 3.2% intraday'},
+{k:'Nasdaq Comp.',v:23585.80,c:-0.62,d:'25 Nov',u:'https://portfolio-terminal.com/markets/stock-market-close'},
+{k:'Dow Jones',v:50182.95,c:0.33,d:'25 Nov',u:'https://portfolio-terminal.com/markets/stock-market-close'},
+{k:'Russell 2000',v:2704.06,c:0.71,d:'25 Nov',u:'https://portfolio-terminal.com/markets/stock-market-close'},
+{k:'VIX',v:28.29,c:7.32,d:'25 Nov',u:'https://www.ad-hoc-news.de/boerse/news/marktberichte/vix-closed-wednesday-at-28-29-as-inflation-risks-rose/70557948',inv:['more fear','less fear']},
+{k:'FBM KLCI',v:1570.98,c:0.56,d:'26 Nov',u:'https://www.malaymail.com/news/money/2026/11/26/bursa-malaysia-climbs-as-upbeat-regional-sentiment-lifts-heavyweight-stocks/244912'},
+{k:'FBM Small Cap',v:13918.83,c:-1.33,d:'26 Nov',u:'https://www.businesstoday.com.my/2026/11/26/bursa-rally-cools-as-fbm-klci-retreats-from-1581-midday-level/'},
+{k:'USD/MYR',v:4.1135,c:-0.09,d:'26 Nov',u:'https://www.bernama.com/en/market/news.php?id=2639959',dp:4,inv:['ringgit weaker','ringgit stronger']},
+{k:'Fed funds',t:'3.75–4.00%',s:'held 28 Oct',u:'https://www.federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm'},
+{k:'BNM OPR',t:'2.75%',s:'held 5 Nov',u:'https://www.thestar.com.my/business/business-news/2026/11/05/bank-negara-keeps-opr-steady-at-275'},
+{k:'US 10-yr yield',t:'4.85%',s:'25 Nov',u:'https://cappnotes.substack.com/p/closing-look-wednesday-november-25'},
+{k:'Brent crude',t:'$94.61',s:'25 Nov · +3.51%',u:'https://cappnotes.substack.com/p/closing-look-wednesday-november-25'},
+{k:'US PCE inflation',t:'3.8% y/y',s:'Oct · core 3.3%',u:'https://cappnotes.substack.com/p/closing-look-wednesday-november-25'},
+{k:'US CPI',t:'+0.4% m/m',s:'Oct · Sep 3.7% y/y',u:'https://stockanalysis.com/news/us-cpi-rises-october-2026/'},
+{k:'Malaysia CPI',t:'1.9% y/y',s:'Oct',u:'https://www.thestar.com.my/business/business-news/2026/11/19/malaysia039s-inflation-edges-higher-to-19-in-oct'},
+{k:'Malaysia GDP',t:'5.5% y/y',s:'Q3 2026',u:'https://www.malaymail.com/news/money/2026/11/19/ringgit-gains-ground-against-us-dollar-major-currencies-after-malaysia-posts-55pc-gdp-growth/243838'}];
+
+// regime inputs (all sourced; rules below turn them into labels)
+const RIN={vix:28.29,vixPeak:{v:35.89,d:'20 Nov'},ndq:23585.80,ndqPeak:27477.31,ndqPeakD:'5 Oct',klci:1570.98,klciRef:1616.56,klciRefD:'4 Nov',losers:749,gainers:443,smallcap:-1.33};
+
+const CH={
+us:{t:'US indices, last five trading sessions (19 Nov = 100)',time:false,x:['2026-11-19','2026-11-20','2026-11-23','2026-11-24','2026-11-25'],s:[
+ {n:'Nasdaq',v:[23879.20,22617.73,24089.56,23733.54,23585.80]},{n:'S&P 500',v:[7175.83,6910.39,7237.17,7201.09,7182.78]},
+ {n:'Dow',v:[49097.06,48147.33,49595.31,50018.70,50182.95]},{n:'Russell 2000',v:[2655.11,2581.79,2669.66,2684.94,2704.06]}],idx:true,
+ note:'Consecutive trading sessions (the 21–22 Nov weekend is skipped). Daily closes from Portfolio Terminal (Yahoo Finance data).'},
+klci:{t:'FBM KLCI in November (points)',time:true,x:['2026-11-04','2026-11-11','2026-11-12','2026-11-18','2026-11-19','2026-11-25','2026-11-26'],s:[{n:'KLCI',v:[1616.56,1595.19,1585.96,1566.73,1566.16,1562.29,1570.98]}],
+ note:'Spaced by calendar date; only days with a sourced close are plotted, so gaps are missing data, not flat prices. Sources: Bernama, The Star, Malay Mail, Moomoo (4 Nov).'},
+vix:{t:'VIX, the US "fear gauge"',time:true,x:['2026-10-26','2026-10-28','2026-10-30','2026-11-03','2026-11-04','2026-11-05','2026-11-06','2026-11-09','2026-11-11','2026-11-13','2026-11-16','2026-11-17','2026-11-18','2026-11-19','2026-11-20','2026-11-24','2026-11-25'],
+ s:[{n:'VIX',v:[18.39,16.91,19.42,20.83,16.61,28.18,25.64,19.92,17.49,19.30,22.91,25.46,24.52,28.44,35.89,26.36,28.29]}],ref:20,
+ note:'Spaced by calendar date. Peak close 35.89 on 20 Nov, its highest of 2026 (intraday high 40.03). 23 Nov is missing from the sources found. Sources: Investing.com, FRED, CEO Economy, ad-hoc-news, Cboe.'}};
+
+// news events: s = AI-judged impact; tk = {ticker: relevance 0–1}; weak = secondary source (weight halved)
+const N=[
+{id:'ai',d:'2026-11-20',h:'AI sell-off wipes out the Nasdaq’s 2026 gain; Nvidia falls about 14%',s:-70,cat:'Market',mk:['US','MY'],tk:{NVDA:1,AVGO:.7,META:.3,MSFT:.3,GOOGL:.3,AMZN:.3,INARI:.4,YTLPOWR:.5,GAMUDA:.3},src:[['TradingKey','https://www.tradingkey.com/analysis/stocks/us-stocks/262316111-nasdaq-falls-ai-stock-selloff-nvidia-sec-probe-tradingkey'],['Yahoo Finance','https://finance.yahoo.com/markets/stocks/articles/nasdaq-approaches-concerning-milestone-ahead-012605637.html']],imp:'Broad de-rating of AI hardware and data-centre names; the S&P 500 and Dow entered correction territory. Partly reversed on 23 Nov.',dur:'Short–medium'},
+{id:'sec',d:'2026-11-17',h:'SEC reported to be investigating Nvidia’s accounting',s:-40,cat:'Regulatory',mk:['US'],tk:{NVDA:1},src:[['TradingKey (citing WSJ, Reuters)','https://www.tradingkey.com/analysis/stocks/us-stocks/262316111-nasdaq-falls-ai-stock-selloff-nvidia-sec-probe-tradingkey']],imp:'An unresolved regulatory probe; scope not public. Flagged as an open event risk.',dur:'Medium'},
+{id:'nvceo',d:'2026-11-25',h:'Jensen Huang returns as Nvidia CEO after 11 turbulent days; S&P puts its AA rating on CreditWatch Negative',s:-25,cat:'Management',mk:['US'],tk:{NVDA:1},src:[['StockAnalysis (Reuters, WSJ)','https://stockanalysis.com/stocks/nvda/'],['CappNotes','https://cappnotes.substack.com/p/closing-look-wednesday-november-25']],imp:'Leadership uncertainty eases, but a ratings agency flags governance risk. The stock still fell 3.9%.',dur:'Short'},
+{id:'nvmy',d:'2026-11-26',h:'Nvidia reportedly halts server shipments to Malaysia and three neighbours; YTL Power drops 8.6%',s:-75,cat:'Trade restriction',mk:['MY'],tk:{YTLPOWR:1,GAMUDA:.5,NVDA:.2},src:[['The Rakyat Post','https://www.therakyatpost.com/news/malaysia/2026/11/26/no-permit-no-chips-u-s-trade-rule-puts-malaysias-data-centres-on-ice/'],['Dragon Leong (citing FT)','https://dragonleong.substack.com/p/update-26-november-on-dksh-padini']],imp:'Direct hit to Malaysia’s AI data-centre build-out. Nvidia had not commented by the snapshot (US holiday).',dur:'Medium'},
+{id:'lic',d:'2026-11-17',h:'New US licence rule for advanced chips sent to Malaysia, Singapore, Thailand, Indonesia and Brazil',s:-55,cat:'Trade restriction',mk:['MY','US'],tk:{YTLPOWR:.8,INARI:.4,NVDA:.3},src:[['RuntimeWire (citing Reuters)','https://runtimewire.com/article/us-chip-licences-southeast-asia-data-centre-boom']],imp:'Adds compliance friction to Southeast Asian AI compute and the chip supply chain.',dur:'Long'},
+{id:'tariff',d:'2026-11-25',h:'US proposes extra tariffs of up to 18% on Malaysian goods, with 25% possible; Malaysia insists on a 19% overall ceiling',s:-35,cat:'Tariffs',mk:['MY'],tk:{INARI:.7,PMETAL:.4,SDG:.2},src:[['Malay Mail','https://www.malaymail.com/news/malaysia/2026/11/26/us-proposes-tariffs-of-up-to-18pc-on-malaysian-goods-with-25pc-on-the-table/244776'],['The Star','https://www.thestar.com.my/news/nation/2026/11/26/us-tariffs-capped-at-18-for-malaysian-goods-in-latest-proposal'],['NST','https://www.nst.com.my/business/economy/2026/11/1586161/us-signals-tariffs-18-25pct-malaysia-insists-19pct-ceiling-watch']],imp:'Section 301 proposal over "excess capacity"; ICT is among targeted sectors and some products are exempt. Talks run into Q1 2027. Exporters (tech first) carry the risk.',dur:'Medium'},
+{id:'pce',d:'2026-11-25',h:'US PCE inflation rises to 3.8%; Q3 GDP revised up to 4.3%; S&P 500 falls as much as 3.2% intraday before recovering',s:-20,cat:'Inflation / growth',mk:['US','MY'],tk:{},src:[['CappNotes','https://cappnotes.substack.com/p/closing-look-wednesday-november-25'],['ad-hoc-news','https://www.ad-hoc-news.de/boerse/news/marktberichte/vix-closed-wednesday-at-28-29-as-inflation-risks-rose/70557948']],imp:'Hot inflation plus strong growth strengthens the case for a December Fed hike. Core PCE 3.3% vs 3.2% expected.',dur:'Medium'},
+{id:'fed',d:'2026-10-28',h:'Fed holds at 3.75–4.00% with two dissents for a hike; markets price a December increase',s:-30,cat:'Interest rates',mk:['US','MY'],tk:{},src:[['Federal Reserve','https://www.federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm']],imp:'Higher-for-longer rates weigh on growth valuations and support the dollar against the ringgit. Next decision 9 Dec.',dur:'Medium'},
+{id:'cpi',d:'2026-11-10',h:'US consumer prices rise 0.4% in October, above the 0.3% forecast',s:-25,cat:'Inflation',mk:['US'],tk:{},src:[['StockAnalysis (BLS)','https://stockanalysis.com/news/us-cpi-rises-october-2026/']],imp:'No annual rate was published; the last one was 3.7% (September).',dur:'Medium'},
+{id:'opr',d:'2026-11-05',h:'Bank Negara keeps the OPR at 2.75%; analysts expect a hike to 3% in early 2027',s:10,cat:'Interest rates',mk:['MY'],tk:{MAYBANK:.5,PBBANK:.5,CIMB:.5},src:[['The Star','https://www.thestar.com.my/business/business-news/2026/11/05/bank-negara-keeps-opr-steady-at-275'],['Bernama','https://www.bernama.com/tv/news.php?id=2634597']],imp:'A future hike would widen bank lending margins.',dur:'Long'},
+{id:'gdp',d:'2026-11-18',h:'Malaysia’s economy grows 5.5% in Q3 2026',s:30,cat:'Economy',mk:['MY'],tk:{MAYBANK:.3,PBBANK:.3,CIMB:.3,TENAGA:.3},src:[['Malay Mail (Bernama)','https://www.malaymail.com/news/money/2026/11/19/ringgit-gains-ground-against-us-dollar-major-currencies-after-malaysia-posts-55pc-gdp-growth/243838']],imp:'Solid domestic backdrop for banks and utilities.',dur:'Long'},
+{id:'cimb',d:'2026-11-25',h:'CIMB Q3 net profit falls 9.5% to RM1.89bn; declares a 5.5 sen special dividend',s:10,cat:'Earnings / dividend',mk:['MY'],tk:{CIMB:1},src:[['Business Today','https://www.businesstoday.com.my/2026/11/26/stock-today-cimb-gains-1-54-after-third-quarter-earnings-special-dividend/']],imp:'Weaker earnings offset by capital return.',dur:'Short'},
+{id:'tnb',d:'2026-11-26',h:'Tenaga Q3 normalised profit up 5% on a larger regulated asset base; CGS sets RM16.60 target',s:20,cat:'Earnings',mk:['MY'],tk:{TENAGA:1},src:[['Minichart (CGS International)','https://www.minichart.com.sg/2026/11/27/tenaga-nasionals-rm16-60-target-price-and-32-8-upside-explained/']],imp:'Regulated earnings growth supports the defensive, dividend case.',dur:'Long'},
+{id:'sdg',d:'2026-11-24',h:'SD Guthrie surprises with an 11.5 sen second interim dividend; FY26 total 22.68 sen',s:35,cat:'Dividend',mk:['MY'],tk:{SDG:1},src:[['KLSE Screener (The Edge)','https://www.klsescreener.com/v2/news/view/1834627/sd-guthrie-rises-after-surprise-dividend-cimb-sees-potential-for-higher-payouts']],imp:'Signals strong cash generation; all 20 analysts in Bloomberg’s consensus rate it a buy.',dur:'Medium'},
+{id:'inari',d:'2026-11-18',h:'Inari 1QFY27 profit up 20% to RM60.4m; Maybank IB upgrades to Buy, Kenanga trims target',s:15,cat:'Earnings / analyst',mk:['MY'],tk:{INARI:1},src:[['Business Today','https://www.businesstoday.com.my/2026/11/19/stock-today-inari-amertron-rallies-6-31-after-stronger-1qfy2027-earnings/']],imp:'Better results, but chip rules and tariffs cap the rebound.',dur:'Short'},
+{id:'pmq3',d:'2026-11-26',h:'Press Metal Q3 profit jumps 52% to RM855m (core +27% to RM714m), well above forecasts; 2.5 sen dividend',s:40,cat:'Earnings',mk:['MY'],tk:{PMETAL:1},src:[['NST','https://www.nst.com.my/business/corporate/2026/11/1586465/press-metals-q3-net-profit-jumps-52pct-rm85502m'],['Business Today','https://www.businesstoday.com.my/2026/11/26/press-metals-3qfy26-patami-jumps-52-to-rm855-million-declares-2-5-sen-dividend/']],imp:'Core profit beat RHB’s RM610–660m forecast. Released after the 26 Nov close, so not yet in the price shown.',dur:'Short–medium'},
+{id:'avgo',d:'2026-11-20',h:'Broadcom falls about 12% after an analyst says Google cut 2027 TPU orders by 20%',s:-50,cat:'Demand',mk:['US'],tk:{AVGO:1,GOOGL:.2},src:[['StockAnalysis','https://stockanalysis.com/stocks/avgo/']],imp:'Questions the custom-AI-chip growth path; the stock has not recovered.',dur:'Medium'},
+{id:'oil',d:'2026-11-25',h:'Brent jumps 3.5% to $94.61 after a Houthi attack on Saudi Arabia’s Ras Tanura refinery',s:-5,cat:'Commodities',mk:['US','MY'],tk:{},src:[['CappNotes','https://cappnotes.substack.com/p/closing-look-wednesday-november-25']],imp:'Reverses part of November’s oil slide; adds to inflation worries.',dur:'Short'},
+{id:'boe',d:'2026-11-26',h:'Bank of England warns AI financing threatens financial stability; hyperscaler exposure put above $4 trillion',s:-15,cat:'Regulatory',mk:['US'],tk:{MSFT:.6,META:.6,GOOGL:.6,AMZN:.6},src:[['StockAnalysis','https://stockanalysis.com/stocks/msft/']],imp:'Raises the cost-of-capital question for AI spending.',dur:'Medium'},
+{id:'googl',d:'2026-11-26',h:'Alphabet shareholders sue over Gemini chatbot claims',s:-15,cat:'Legal',mk:['US'],tk:{GOOGL:1},src:[['StockAnalysis (TipRanks)','https://stockanalysis.com/stocks/googl/']],imp:'Headline and legal-cost risk.',dur:'Short'},
+{id:'amzn',d:'2026-11-20',h:'Oppenheimer raises its Amazon target to $310 after the Anthropic IPO',s:15,cat:'Analyst',mk:['US'],tk:{AMZN:1},src:[['StockAnalysis (TipRanks)','https://stockanalysis.com/stocks/amzn/']],imp:'Amazon’s stake in Anthropic is being revalued.',dur:'Medium'},
+{id:'meta',d:'2026-11-25',h:'Meta rallies 3.4% on its Muse news',s:20,cat:'Product',mk:['US'],tk:{META:1},src:[['StockAnalysis','https://stockanalysis.com/stocks/meta/'],['CappNotes','https://cappnotes.substack.com/p/closing-look-wednesday-november-25']],imp:'One of few big tech gainers that day.',dur:'Short'},
+{id:'lly',d:'2026-11-20',h:'Study links GLP-1 drugs to heart improvements in obesity and heart-failure patients',s:15,cat:'Healthcare',mk:['US'],tk:{LLY:1},src:[['StockAnalysis (Reuters)','https://stockanalysis.com/stocks/lly/']],imp:'Supports long-term demand for Lilly’s weight-loss drugs.',dur:'Long'},
+{id:'ko',d:'2026-11-19',h:'Barron’s: Coca-Cola’s valuation is the highest in 25 years',s:-10,cat:'Valuation',mk:['US'],tk:{KO:1},src:[['StockAnalysis (Barron’s)','https://stockanalysis.com/stocks/ko/']],imp:'Defensive buying has stretched the multiple.',dur:'Medium'},
+{id:'epf',d:'2026-11-26',h:'EPF keeps buying YTL Power: about 43m shares acquired 16–23 Nov',s:15,cat:'Institutional activity',mk:['MY'],tk:{YTLPOWR:1},src:[['KLSE Screener (Bursa filings)','https://www.klsescreener.com/v2/stocks/view/6742']],imp:'Local institutional accumulation into the sell-off.',dur:'Medium'},
+{id:'mbb',d:'2026-11-26',h:'Maybank Q3: EPS beat estimates by 6%, revenue missed by 3.8%',s:10,cat:'Earnings',mk:['MY'],tk:{MAYBANK:1},src:[['Google Finance','https://www.google.com/finance/quote/MAYBANK:KLSE']],imp:'Core income grew; mark-to-market losses weighed on operating income.',dur:'Short'},
+{id:'gam',d:'2026-11-17',h:'Gamuda slides with data-centre stocks; UOB Kay Hian puts data centres at about 14% of its RM61bn order book',s:-20,cat:'Sector sentiment',mk:['MY'],tk:{GAMUDA:1},weak:true,src:[['Moomoo community post (citing UOB Kay Hian)','https://www.moomoo.com/community/feed/gamuda-5398-my-gamuda-5398-strong-fundamentals-weak-chart-is-117630074028038']],imp:'Record order book intact, but data-centre exposure ties it to the chip-rule story. Secondary source, so weighted at half.',dur:'Short'},
+{id:'natgate',d:'2026-11-26',h:'NationGate (NATGATE, not in the 20) Q3 profit jumps 66% to RM21m as revenue nearly triples to RM2.77bn; 0.25 sen dividend',s:30,cat:'Earnings (outside watchlist)',mk:['MY'],tk:{},src:[['KLSE Screener (Bursa filing, 26 Nov 6:05pm)','https://www.klsescreener.com/v2/stocks/view/0270'],['News Minimalist','https://www.newsminimalist.com/articles/nationgates-3q-net-profit-jumps-657percent-on-data-computing-strength-c5b4448a'],['MarketScreener (Reuters brief)','https://www.marketscreener.com/quote/stock/NATIONGATE-HOLDINGS-150152122/news-key-events/']],imp:'Data-computing orders drove the jump; photonics mass production is planned for 1H 2027. Nine-month profit is still down 73%. Filed after the close, so the share price had not reacted at the snapshot.',dur:'Short'},
+{id:'jpm',d:'2026-11-24',h:'FDIC: US bank profits dipped slightly in the third quarter',s:-5,cat:'Industry',mk:['US'],tk:{JPM:1},src:[['StockAnalysis (Reuters)','https://stockanalysis.com/stocks/jpm/']],imp:'Mild sector headwind.',dur:'Short'}];
+
+// open event risks (unresolved; cap the label while open)
+const FLAGS={NVDA:{t:'Reported SEC accounting probe is unresolved',d:'2026-11-17'},YTLPOWR:{t:'Reported Nvidia shipment halt awaits Nvidia’s response',d:'2026-11-26'}};
+
+// 30-day closes, newest first (StockAnalysis / Yahoo Finance history pages); '' = missing day
+const H={
+NVDA:'149.30 155.38 165.05 125.53 145.98 150.96 155.46 156.14 162.85 166.19 173.73 168.89 178.67 186.64 181.60 200.13 206.69 202.06 204.64 213.66 215.38 217.94 216.00 210.96 212.21 221.97 216.47 217.09 214.13 217.23',
+MSFT:'489.93 496.13 492.50 484.52 498.30 508.29 506.24 517.99 523.88 523.00 521.13 533.16 545.18 530.61 535.93 555.80 520.99 507.12 521.91 530.14 531.01 531.33 532.60 524.51 521.08 532.95 531.87 533.52 529.05 539.44',
+AAPL:'355.58 354.07 349.08 342.56 349.21 352.45 351.91 352.78 356.27 354.88 355.63 348.51 350.69 342.37 344.17 349.51 331.90 338.32 344.63 348.91 343.83 347.10 343.91 347.73 348.22 343.99 339.50 342.94 343.46 342.00',
+GOOGL:'273.10 279.05 282.10 265.29 272.66 282.44 280.20 283.72 295.77 298.70 293.45 287.38 288.15 284.78 282.57 288.93 280.03 278.99 279.84 283.82 324.89 320.58 316.80 320.21 324.22 334.76 340.28 344.18 340.59 349.22',
+AMZN:'244.43 252.29 255.39 246.82 257.37 267.74 257.89 257.75 266.66 267.44 266.17 270.87 266.93 259.30 260.21 266.03 250.69 245.63 240.35 243.79 254.60 253.10 249.09 248.00 250.38 262.37 262.63 262.45 250.00 254.76',
+META:'609.89 589.82  560.84 596.22 616.38 618.87 626.41 641.69 623.61 628.77 641.39 641.37 610.15 605.08 630.00 621.03 606.73 614.99 624.52 612.49 620.19 630.56 642.62 648.85 697.52 694.25 705.44 709.33 736.72',
+AVGO:'300.86 301.08 313.55 304.41 346.65 354.05 341.60 333.40 347.01 364.36 345.22 331.98 319.48 293.69 291.53 325.48 332.13 322.23 326.08 345.00 351.81 342.33 329.17 321.68 323.24 337.80 334.37 334.59 328.75 344.33',
+JPM:'316.74 317.10 316.66 310.53 320.22 324.11 329.96 338.21 346.19 342.82 343.39 342.07 342.08 334.49 337.34 352.11 337.98 340.58 337.04 343.58 339.30 335.79 334.04 331.58 336.54 335.19 335.26 333.53 339.72 335.53',
+LLY:'1392.22 1407.59 1364.60 1347.11 1351.12 1382.75 1415.55 1431.67 1443.50 1427.28 1437.29 1432.29 1411.95 1354.00 1364.73 1417.99 1409.38 1410.99 1417.54 1373.70 1288.30 1281.91 1279.14 1273.46 1306.69 1270.75 1283.66 1240.34 1257.03 1251.61',
+TENAGA:'12.50 12.42 12.44 12.46 12.68 12.60 12.58 12.58 12.74 12.76 12.80 12.96 13.18 13.04 13.10 13.14 13.16 13.30 13.30 13.30 13.22 13.30 13.28 13.30 13.24 12.98 13.06 12.98 13.00 12.98',
+INARI:'2.08 2.11 2.15 2.07 2.11 2.23 2.06 1.99 2.13 2.12 2.17 2.27 2.19 2.12 2.28 2.46 2.38 2.46 2.55 2.60 2.61 2.56 2.52 2.51 2.46 2.58 2.55 2.59 2.66 2.57'};
+
+// p = latest close on d; s2 = second independent source confirms it. pe/fpe measured at pRef on fd.
+const S=[
+{t:'NVDA',n:'NVIDIA',ex:'NASDAQ',m:'US',sec:'Semiconductors',cur:'USD',p:149.30,ch:-3.91,d:'2026-11-25',s2:true,pRef:149.30,pe:16.04,fpe:10.30,fd:'2026-11-25',dps:1.00,lo:124.50,hi:243.37,tgt:242.43,an:'Buy',na:63,mc:'$3.61T',ps:'StockAnalysis; CappNotes',pu:'https://stockanalysis.com/stocks/nvda/',cat:['Forward P/E near 10 after a 39% fall from the high','Huang reinstated, reducing leadership uncertainty','Ex-dividend 2 Dec'],rk:['Reported SEC accounting probe','S&P CreditWatch Negative on governance','US chip-export rules and the reported halt of shipments to Southeast Asia']},
+{t:'MSFT',n:'Microsoft',ex:'NASDAQ',m:'US',sec:'Software',cur:'USD',p:489.93,ch:-1.25,d:'2026-11-25',s2:false,pRef:489.93,pe:25.58,fpe:23.60,fd:'2026-11-25',dps:3.92,lo:349.20,hi:559.15,tgt:637.36,an:'Strong Buy',na:58,mc:'$3.64T',ps:'StockAnalysis',pu:'https://stockanalysis.com/stocks/msft/',cat:['Strong Buy consensus with 30% implied upside','Calmer than chip peers'],rk:['AI-financing scrutiny (Bank of England warning)','Heavy capex while rates may rise']},
+{t:'AAPL',n:'Apple',ex:'NASDAQ',m:'US',sec:'Consumer tech',cur:'USD',p:355.58,ch:0.43,d:'2026-11-25',s2:false,pRef:354.07,pe:39.43,fpe:37.59,fd:'2026-11-24',dps:1.08,lo:243.42,hi:360.83,tgt:345.63,an:'Buy',na:45,mc:'$5.2T',ps:'StockAnalysis history',pu:'https://stockanalysis.com/stocks/aapl/history/',fu:'https://stockanalysis.com/stocks/aapl/',cat:['Near its 52-week high while tech falls','EPS up 20% over the trailing year'],rk:['Price above the consensus target','Forward P/E near 38']},
+{t:'GOOGL',n:'Alphabet',ex:'NASDAQ',m:'US',sec:'Internet',cur:'USD',p:273.10,ch:-2.13,d:'2026-11-25',s2:true,pRef:273.10,pe:14.26,fpe:19.84,fd:'2026-11-25',dps:0.88,lo:262.73,hi:408.61,tgt:395.11,an:'Strong Buy',na:60,mc:'$3.36T',ps:'StockAnalysis; CappNotes',pu:'https://stockanalysis.com/stocks/googl/',cat:['45% upside to consensus','Close to its 52-week low'],rk:['Trailing EPS boosted by one-offs (forward P/E above trailing)','Shareholder lawsuit over Gemini claims']},
+{t:'AMZN',n:'Amazon',ex:'NASDAQ',m:'US',sec:'Internet retail / cloud',cur:'USD',p:244.43,ch:-3.12,d:'2026-11-25',s2:true,pRef:246.82,pe:19.95,fpe:24.96,fd:'2026-11-20',dps:0,lo:196.00,hi:287.20,tgt:326.51,an:'Strong Buy',na:62,mc:'$2.64T',ps:'StockAnalysis history; CappNotes',pu:'https://stockanalysis.com/stocks/amzn/history/',fu:'https://stockanalysis.com/stocks/amzn/',cat:['Anthropic stake being revalued','34% upside to consensus'],rk:['Fell 3.1% on 25 Nov','No dividend']},
+{t:'META',n:'Meta Platforms',ex:'NASDAQ',m:'US',sec:'Internet',cur:'USD',p:609.89,ch:3.40,d:'2026-11-25',s2:true,pRef:609.89,pe:20.80,fpe:18.76,fd:'2026-11-25',dps:2.10,lo:520.26,hi:779.82,tgt:842.54,an:'Strong Buy',na:62,mc:'$1.56T',ps:'StockAnalysis; CappNotes',pu:'https://stockanalysis.com/stocks/meta/',cat:['38% upside to consensus','Muse product news'],rk:['Heavy AI spending under financing scrutiny']},
+{t:'AVGO',n:'Broadcom',ex:'NASDAQ',m:'US',sec:'Semiconductors',cur:'USD',p:300.86,ch:-0.07,d:'2026-11-25',s2:false,pRef:304.41,pe:38.86,fpe:17.52,fd:'2026-11-20',dps:2.60,lo:289.77,hi:495.00,tgt:526.47,an:'Strong Buy',na:51,mc:'$1.43T',ps:'StockAnalysis history',pu:'https://stockanalysis.com/stocks/avgo/history/',fu:'https://stockanalysis.com/stocks/avgo/',cat:['Forward P/E 17 if forecasts hold'],rk:['Report that Google cut 2027 TPU orders 20%','Consensus target may not yet reflect the cut']},
+{t:'JPM',n:'JPMorgan Chase',ex:'NYSE',m:'US',sec:'Banking',cur:'USD',p:316.74,ch:-0.11,d:'2026-11-25',s2:false,pRef:316.74,pe:13.30,fpe:12.66,fd:'2026-11-25',dps:6.60,lo:279.10,hi:366.50,tgt:373.65,an:'Buy',na:26,mc:'$841B',ps:'StockAnalysis',pu:'https://stockanalysis.com/stocks/jpm/',cat:['Benefits if rates stay higher','EPS up 18% over the trailing year'],rk:['Credit risk if the economy slows','Sector profits dipped in Q3']},
+{t:'LLY',n:'Eli Lilly',ex:'NYSE',m:'US',sec:'Pharmaceuticals',cur:'USD',p:1392.22,ch:-1.09,d:'2026-11-25',s2:false,pRef:1347.11,pe:43.72,fpe:28.70,fd:'2026-11-20',dps:6.92,lo:850.51,hi:1475.25,tgt:1470.06,an:'Buy',na:31,mc:'$1.24T',ps:'StockAnalysis history',pu:'https://stockanalysis.com/stocks/lly/history/',fu:'https://stockanalysis.com/stocks/lly/',cat:['GLP-1 demand and new heart-health data','Low market sensitivity (beta 0.39)'],rk:['Rich valuation','Drug-pricing policy risk']},
+{t:'KO',n:'Coca-Cola',ex:'NYSE',m:'US',sec:'Consumer staples',cur:'USD',p:97.59,ch:-0.03,d:'2026-11-25',s2:true,pRef:97.59,pe:28.79,fpe:28.06,fd:'2026-11-25',dps:2.12,lo:67.27,hi:100.56,tgt:99.84,an:'Buy',na:26,mc:'$420B',ps:'StockAnalysis; Yahoo Finance; CNBC',pu:'https://stockanalysis.com/stocks/ko/market-cap/',fu:'https://www.cnbc.com/quotes/KO',cat:['Defensive cash flows in a volatile market','Ex-dividend 1 Dec'],rk:['Valuation highest in 25 years (Barron’s)','Only 2% upside to consensus']},
+{t:'MAYBANK',n:'Malayan Banking',ex:'Bursa Main',m:'MY',sec:'Banking',cur:'MYR',p:10.24,ch:0.79,d:'2026-11-26',s2:true,pRef:10.12,pe:11.68,fpe:11.28,fd:'2026-11-06',dps:0.64,lo:9.78,hi:12.42,tgt:11.69,an:'Buy',na:17,mc:'RM124B',ps:'Malay Mail; Google Finance',pu:'https://www.malaymail.com/news/money/2026/11/26/bursa-malaysia-climbs-as-upbeat-regional-sentiment-lifts-heavyweight-stocks/244912',fu:'https://stockanalysis.com/quote/klse/MAYBANK/',cat:['About 6% dividend yield','A 2027 OPR hike would lift margins'],rk:['Mark-to-market losses in Q3','Regional credit cycle']},
+{t:'PBBANK',n:'Public Bank',ex:'Bursa Main',m:'MY',sec:'Banking',cur:'MYR',p:4.66,ch:2.42,d:'2026-11-26',s2:true,pRef:4.57,pe:12.11,fpe:11.65,fd:'2026-10-09',dps:0.23,lo:4.18,hi:5.29,tgt:5.57,an:'Buy',na:17,mc:'RM90B',ps:'Malay Mail; The Library',pu:'https://www.malaymail.com/news/money/2026/11/26/bursa-malaysia-climbs-as-upbeat-regional-sentiment-lifts-heavyweight-stocks/244912',fu:'https://stockanalysis.com/quote/klse/PBBANK/',cat:['Led KLCI gains on 26 Nov','20% upside to consensus'],rk:['Valuation inputs dated 9 Oct']},
+{t:'CIMB',n:'CIMB Group',ex:'Bursa Main',m:'MY',sec:'Banking',cur:'MYR',p:7.20,ch:1.12,d:'2026-11-26',s2:true,pRef:7.04,pe:9.68,fpe:9.36,fd:'2026-11-20',dps:0.47,lo:6.83,hi:8.95,tgt:8.31,an:'Buy',na:18,mc:'RM78B',ps:'Malay Mail; The Library',pu:'https://www.malaymail.com/news/money/2026/11/26/bursa-malaysia-climbs-as-upbeat-regional-sentiment-lifts-heavyweight-stocks/244912',fu:'https://stockanalysis.com/quote/klse/CIMB/',cat:['5.5 sen special dividend','Lowest P/E of the three big banks'],rk:['Q3 net profit down 9.5% y/y','Hit a 52-week low (RM6.83) on 2 Nov']},
+{t:'TENAGA',n:'Tenaga Nasional',ex:'Bursa Main',m:'MY',sec:'Utilities',cur:'MYR',p:12.50,ch:0.64,d:'2026-11-26',s2:true,pRef:13.00,pe:16.70,fpe:15.25,fd:'2026-10-05',dps:0.50,lo:12.42,hi:14.90,tgt:15.96,an:'Buy',na:21,mc:'RM72.6B',ps:'Malay Mail; Yahoo Finance history',pu:'https://www.malaymail.com/news/money/2026/11/26/bursa-malaysia-climbs-as-upbeat-regional-sentiment-lifts-heavyweight-stocks/244912',fu:'https://sg.finance.yahoo.com/quote/5347.KL/',cat:['Q3 normalised profit +5% on regulated asset base','28% upside to consensus'],rk:['New 52-week low of RM12.42 on 25 Nov: trend is down','Regulatory tariff resets']},
+{t:'GAMUDA',n:'Gamuda',ex:'Bursa Main',m:'MY',sec:'Construction',cur:'MYR',p:4.39,ch:-1.35,d:'2026-11-26',s2:true,pRef:4.98,pe:28.73,fpe:23.01,fd:'2026-09-29',dps:0.10,lo:3.70,hi:5.46,tgt:5.76,an:'Buy',na:19,mc:'RM27.2B',ps:'Morningstar; MSN Money',pu:'https://www.msn.com/en-my/money/stockdetails/gamuda-my-stock/fi-alaipr',fu:'https://www.marketscreener.com/quote/stock/GAMUDA-6491223/',cat:['Record RM61bn order book','Consensus Buy (19 analysts)'],rk:['Data-centre exposure (about 14% of order book)','Net gearing about 72%','Forward P/E dated 29 Sep']},
+{t:'IHH',n:'IHH Healthcare',ex:'Bursa Main',m:'MY',sec:'Healthcare',cur:'MYR',p:7.90,ch:0.13,d:'2026-11-26',s2:false,pRef:7.94,pe:31.26,fpe:28.11,fd:'2026-10-21',dps:0.11,lo:7.54,hi:9.58,tgt:10.31,an:'Strong Buy',na:23,mc:'RM70B',earn:'2026-11-27',ps:'Malay Mail',pu:'https://www.malaymail.com/news/money/2026/11/26/bursa-malaysia-climbs-as-upbeat-regional-sentiment-lifts-heavyweight-stocks/244912',fu:'https://stockanalysis.com/quote/klse/IHH/',cat:['Q2 PATMI (ex-EI) +36% y/y','31% upside to consensus'],rk:['Q3 results due about 27 Nov (not in this snapshot)','Premium valuation']},
+{t:'INARI',n:'Inari Amertron',ex:'Bursa Main',m:'MY',sec:'Semiconductors',cur:'MYR',p:2.08,ch:-1.42,d:'2026-11-26',s2:false,pRef:2.58,pe:77.01,fpe:35.92,fd:'2026-09-04',dps:0.047,lo:1.21,hi:2.88,tgt:2.71,an:'Buy',na:18,mc:'RM8.0B',ps:'Morningstar (Yahoo history consistent)',pu:'https://www.morningstar.com/stocks/xkls/0166/quote',fu:'https://stockanalysis.com/quote/klse/INARI/',cat:['1QFY27 profit +20% y/y','About RM2.2bn net cash'],rk:['Very high trailing P/E','Tariff proposal targets ICT; US chip rules','Valuation inputs dated 4 Sep']},
+{t:'YTLPOWR',n:'YTL Power International',ex:'Bursa Main',m:'MY',sec:'Utilities / data centres',cur:'MYR',p:3.61,ch:-8.61,d:'2026-11-26',s2:true,pRef:4.16,pe:23.13,fpe:16.58,fd:'2026-11-24',dps:0.08,lo:2.51,hi:6.02,tgt:6.45,an:'Strong Buy',na:14,mc:'RM31.5B',ps:'Morningstar; Dragon Leong',pu:'https://www.morningstar.com/stocks/xkls/6742/quote',fu:'https://stockanalysis.com/quote/klse/YTLPOWR/',cat:['EPF bought about 43m shares in a week','Analysts keep Buy calls (targets RM5.98–6.40)'],rk:['Reported Nvidia shipment halt to Malaysia','US chip-licence rule','Down about 40% since late September']},
+{t:'PMETAL',n:'Press Metal Aluminium',ex:'Bursa Main',m:'MY',sec:'Industrial products',cur:'MYR',p:6.40,ch:1.75,d:'2026-11-26',s2:false,pRef:8.01,pe:25.59,fpe:26.12,fd:'2026-09-04',dps:0.10,lo:5.51,hi:9.38,tgt:9.41,an:'Buy',na:15,mc:'RM53B',ps:'Malay Mail',pu:'https://www.malaymail.com/news/money/2026/11/26/bursa-malaysia-climbs-as-upbeat-regional-sentiment-lifts-heavyweight-stocks/244912',fu:'https://stockanalysis.com/quote/klse/PMETAL/',cat:['Q3 core profit +27%, beating forecasts (after the close shown)','RHB calls the sell-off a chance to accumulate'],rk:['Aluminium below $3,000/t; carbon-anode costs at a 3-year high','Consensus target and P/E date from 4 Sep, before a 20% fall','Tariff proposal on Malaysian exports']},
+{t:'SDG',n:'SD Guthrie',ex:'Bursa Main',m:'MY',sec:'Plantation',cur:'MYR',p:6.00,ch:1.52,d:'2026-11-25',s2:false,pRef:6.00,pe:14.74,fpe:15.58,fd:'2026-11-06',dps:0.2268,lo:5.18,hi:7.00,tgt:7.70,an:'Strong Buy',na:20,mc:'RM41B',ps:'KLSE Screener / The Edge',pu:'https://www.klsescreener.com/v2/news/view/1834627/sd-guthrie-rises-after-surprise-dividend-cimb-sees-potential-for-higher-payouts',fu:'https://stockanalysis.com/quote/klse/SDG/',cat:['Surprise 11.5 sen dividend','All 20 Bloomberg-polled analysts rate it a buy'],rk:['Q3 net profit down 17% y/y','CPO price swings']}];
+
+const STRAT={
+bal:{n:'Balanced',w:{val:.20,up:.15,gr:.15,mom:.15,inc:.10,stab:.10,news:.15},h:'6–12 months',note:'Even mix of value, growth, trend, income and news.'},
+val:{n:'Value',w:{val:.30,up:.20,dip:.10,gr:.05,inc:.10,stab:.15,news:.10},h:'6–18 months',note:'Rewards low forward P/E, upside to targets and buying after a pullback.'},
+gro:{n:'Growth & momentum',w:{gr:.30,mom:.25,up:.15,news:.15,val:.05,stab:.10},h:'1–6 months',note:'Rewards expected EPS growth and recent price strength. Confidence is cut for US stocks while the US mood is high-volatility.'},
+div:{n:'Dividend',w:{inc:.40,stab:.20,val:.15,news:.10,up:.10,gr:.05},h:'12 months +',note:'Rewards yield and steady prices.'},
+def:{n:'Defensive',w:{stab:.35,inc:.20,val:.15,news:.15,up:.10,mom:.05},h:'6–12 months',note:'For a volatile market: favours calm prices and income.'}};
+const COMP={val:'Valuation',up:'Analyst upside',gr:'Growth',mom:'Momentum',dip:'Pullback',inc:'Income',stab:'Stability',news:'News'};
+
+
+/* ================= LIVE DATA LOADER (website version) ================= */
+let LIVE=null;
+const TVX={JPM:'NYSE',LLY:'NYSE',KO:'NYSE'};
+const tvSym=x=>x.tv||(x.m==='MY'?'MYX:'+x.t:(TVX[x.t]||'NASDAQ')+':'+x.t);
+const fmtMc=(v,c)=>!ok(v)?'n/a':(c==='MYR'?'RM':'$')+(v>=1e12?(v/1e12).toFixed(2)+'T':v>=1e9?(v/1e9).toFixed(1)+'B':(v/1e6).toFixed(0)+'M');
+function mergeLive(J){
+ if(!J||!Array.isArray(J.stocks))return;LIVE=J;SNAP=new Date(J.updated);
+ const yURL=y=>'https://finance.yahoo.com/quote/'+encodeURIComponent(y);
+ for(const r of J.stocks){if(!r||!pos(r.p))continue;let x=S.find(s=>s.t===r.t);
+  if(!x){x={t:r.t,n:r.n,ex:r.m==='MY'?'Bursa':(r.ex||''),m:r.m,sec:r.sec,cur:r.cur,an:r.an,na:r.na,mc:fmtMc(r.mc,r.cur),cat:[],rk:[],extra:true};S.push(x)}
+  x.tv=r.tv;x.p=r.p;x.ch=ok(r.ch)?r.ch:0;x.d=r.d;x.s2=false;x.ps='Yahoo Finance (auto-update)';x.pu=yURL(r.y);
+  if(pos(r.fpe)||x.extra){x.pRef=r.p;x.pe=pos(r.pe)?r.pe:null;x.fpe=pos(r.fpe)?r.fpe:null;x.fd=r.d;x.fu=yURL(r.y)}
+  if(pos(r.tgt)){x.tgt=r.tgt;x.na=r.na||x.na;x.an=r.an||x.an}else if(x.extra){x.tgt=null}
+  if(ok(r.dps))x.dps=r.dps;if(pos(r.lo)&&pos(r.hi)){x.lo=Math.min(r.lo,r.p);x.hi=Math.max(r.hi,r.p)}
+  if(ok(r.mc))x.mc=fmtMc(r.mc,r.cur);
+  if(Array.isArray(r.hist)&&r.hist.length>=21)H[r.t]=r.hist.join(' ')}
+ const I=J.idx||{},dd=d=>fmtD(d);
+ IDX.forEach(i=>{const v=I[i.k];if(!v)return;
+  if(i.t!==undefined){i.t=i.k==='Brent crude'?'$'+v.v.toFixed(2):v.v.toFixed(2)+'%';i.s=`${dd(v.d)} · ${v.c>=0?'+':''}${v.c.toFixed(2)}%`}
+  else{i.v=v.v;i.c=v.c;i.d=dd(v.d);delete i.x}
+  i.u='https://finance.yahoo.com/'});
+ if(I['USD/MYR'])FX=I['USD/MYR'].v;if(I.VIX)RIN.vix=I.VIX.v;if(I['Nasdaq Comp.']){RIN.ndq=I['Nasdaq Comp.'].v;if(RIN.ndq>RIN.ndqPeak){RIN.ndqPeak=RIN.ndq;RIN.ndqPeakD=dd(I['Nasdaq Comp.'].d)}}
+ if(I['FBM KLCI'])RIN.klci=I['FBM KLCI'].v;
+ const SR=J.series||{},us=['Nasdaq Comp.','S&P 500','Dow Jones','Russell 2000'];
+ if(us.every(k=>SR[k]&&SR[k].length>=5)){const x5=SR['S&P 500'].slice(-5).map(a=>a[0]);
+  CH.us={...CH.us,t:'US indices, last five trading sessions (first day = 100)',x:x5,s:us.map(k=>({n:k.replace(' Comp.','').replace('Dow Jones','Dow'),v:x5.map(d=>(SR[k].find(a=>a[0]===d)||SR[k].slice(-5)[0])[1])})),note:'Consecutive trading sessions. Daily closes from Yahoo Finance (auto-update).'}}
+ if(SR['FBM KLCI']&&SR['FBM KLCI'].length>=5){const a=SR['FBM KLCI'].slice(-20);CH.klci={...CH.klci,x:a.map(b=>b[0]),s:[{n:'KLCI',v:a.map(b=>b[1])}],t:'FBM KLCI, last 20 trading days',note:'Daily closes from Yahoo Finance (auto-update), spaced by calendar date.'};
+  const ref=SR['FBM KLCI'].at(-16);if(ref){RIN.klciRef=ref[1];RIN.klciRefD=dd(ref[0])}}
+ if(SR.VIX&&SR.VIX.length>=5){const a=SR.VIX.slice(-20);CH.vix={...CH.vix,x:a.map(b=>b[0]),s:[{n:'VIX',v:a.map(b=>b[1])}],note:'Daily closes from Yahoo Finance (auto-update), spaced by calendar date. Above 20 is elevated.'};
+  const mx=a.reduce((m,b)=>b[1]>m[1]?b:m,a[0]);if(mx[1]>RIN.vixPeak.v){RIN.vixPeak={v:mx[1],d:dd(mx[0])}}}
+}
+function start(){
+/* ================= REGIME RULES ================= */
+function usMood(){const dd=1-RIN.ndq/RIN.ndqPeak,v=RIN.vix;let val,term,dot='var(--dn)';
+ if(dd>=.20){val='Falling hard';term='a bear market (20%+ off the high)'}
+ else if(dd>=.10&&v>=25){val='Choppy and falling';term='a high-volatility correction'}
+ else if(dd>=.10){val='Falling';term='a correction (10–20% off the high)'}
+ else if(v>=25){val='Choppy';term='a high-volatility market';dot='var(--warn)'}
+ else if(dd<.05&&v<20){val='Calm and rising';term='a low-volatility uptrend';dot='var(--up)'}
+ else{val='Mixed';term='a mixed market';dot='var(--brown)'}
+ return {dd,v,val,term,dot,hv:v>=25,rule:`Rule: VIX ${v.toFixed(2)} (25+ = high volatility) and Nasdaq ${(dd*100).toFixed(1)}% below its ${RIN.ndqPeakD} record of ${RIN.ndqPeak.toLocaleString('en-US')} (10–20% = correction, 20%+ = bear market).`}}
+function myMood(){const chg=RIN.klci/RIN.klciRef-1,br=RIN.losers/RIN.gainers;let val,term,dot='var(--brown)';
+ if(chg<=-.10){val='Falling';term='a falling market';dot='var(--dn)'}
+ else if(chg>=.05){val='Rising';term='a rising market';dot='var(--up)'}
+ else if(br>=1.3){val='Flat, but most stocks slipping';term='sideways with weak breadth'}
+ else if(br<=.77){val='Flat, but most stocks rising';term='sideways with strong breadth';dot='var(--up)'}
+ else{val='Flat and steady';term='a sideways market'}
+ return {chg,br,val,term,dot,rule:`Rule: KLCI ${(chg*100).toFixed(1)}% since ${RIN.klciRefD} (within ±5% = flat) and ${br.toFixed(2)} falling stocks per rising stock on 26 Nov (1.3+ = weak breadth).`}}
+const US=usMood(),MY=myMood();
+const REGX={
+us:{lab:'US market mood',m:US,mean:'Prices are swinging hard from day to day, and the big US indexes are well below their recent highs. A drop of 10–20% is called a “correction”.',
+ ana:'Think of driving downhill on a bumpy road: you can still get where you’re going, but it’s riskier, so you slow down.',
+ ev:[`The VIX “fear gauge” is ${RIN.vix}. Below 20 is normal calm; it peaked at ${RIN.vixPeak.v} on ${RIN.vixPeak.d}.`,`The Nasdaq is ${(US.dd*100).toFixed(1)}% below its ${RIN.ndqPeakD} record.`,'Big swings: the Nasdaq fell 5.28% on 20 Nov, then jumped 6.51% on 23 Nov; on 25 Nov the S&P 500 fell as much as 3.2% before recovering.'],
+ page:'Growth & momentum scores get lower confidence for US stocks. The Defensive and Dividend strategies are built for this kind of market.'},
+my:{lab:'Bursa market mood',m:MY,mean:'The KLCI (Malaysia’s top 30 companies) has barely moved, but across the whole market more stocks are falling than rising. A few big banks are holding the index up.',
+ ana:'It’s like a class average staying the same because the top students did well, while most of the class slipped.',
+ ev:[`KLCI ${RIN.klci.toLocaleString('en-US')}, ${(MY.chg*100).toFixed(1)}% since ${RIN.klciRefD} (${RIN.klciRef.toLocaleString('en-US')}).`,`On 26 Nov, ${RIN.losers} stocks fell and only ${RIN.gainers} rose.`,`Smaller companies fell more: the FBM Small Cap index lost ${Math.abs(RIN.smallcap)}% that day.`],
+ page:'Big banks look steadier than small and tech stocks right now. The proposed US tariffs (up to 18%) add risk for exporters.'}};
+
+/* ================= INDICATORS ================= */
+function series(t){if(!H[t])return null;const a=H[t].split(' ').map(v=>v===''?null:+v).reverse();return a}
+function indicators(t){const a=series(t);if(!a)return null;const c=a.filter(v=>v!==null);if(c.length<21)return null;
+ const last=c.at(-1),ret20=last/c[c.length-21]-1;const r=[];for(let i=c.length-20;i<c.length;i++)r.push(Math.log(c[i]/c[i-1]));
+ const mu=r.reduce((s,x)=>s+x,0)/r.length,sd=Math.sqrt(r.reduce((s,x)=>s+(x-mu)**2,0)/(r.length-1));
+ let g=0,l=0;const k=c.length-15;for(let i=k+1;i<=k+14;i++){const d=c[i]-c[i-1];if(d>0)g+=d;else l-=d}let ag=g/14,al=l/14;
+ for(let i=k+15;i<c.length;i++){const d=c[i]-c[i-1];ag=(ag*13+Math.max(d,0))/14;al=(al*13+Math.max(-d,0))/14}
+ const rsi=al===0?100:100-100/(1+ag/al);return {ret20,sdD:sd,vol:sd*Math.sqrt(252),rsi,n:c.length,gaps:a.length-c.length}}
+
+/* ================= NEWS SCORING (calculated) ================= */
+const evAge=e=>calDays(new Date(e.d+'T12:00:00Z'),NOW);
+function newsFor(t){let sum=0,severe=null;const parts=[];
+ for(const e of N){const rel=e.tk[t];if(!rel)continue;const age=Math.max(0,evAge(e)),dec=Math.pow(.5,age/14),w=rel*dec*(e.weak?.5:1),c=e.s*w;sum+=c;parts.push({e,rel,dec,c});
+  if(e.s*rel<=-60&&age<=14&&(!severe||e.s*rel<severe.s*severe.rel))severe={...e,rel}}
+ return {net:Math.max(-100,Math.min(100,sum)),parts,severe}}
+
+/* ================= VALIDATION + METRICS ================= */
+function check(x){const iss=[];
+ if(!pos(x.p))iss.push('no valid price');
+ if(!(pos(x.lo)&&pos(x.hi)&&x.hi>x.lo))iss.push('no valid 52-week range');
+ if(!pos(x.pRef))iss.push('no reference price');
+ return iss}
+function metricsRaw(x){
+ const iss=check(x);if(iss.includes('no valid price'))return {bad:iss};
+ const M={iss,flags:[]};
+ const eps=pos(x.pe)&&pos(x.pRef)?x.pRef/x.pe:null,feps=pos(x.fpe)&&pos(x.pRef)?x.pRef/x.fpe:null;
+ M.eps=eps;M.feps=feps;M.pe=eps?x.p/eps:null;M.fpe=feps?x.p/feps:null;
+ M.g=eps&&feps?feps/eps-1:null;M.gBad=M.g!==null&&(M.g<-.25||M.g>.6);
+ M.up=pos(x.tgt)?x.tgt/x.p-1:null;M.yld=ok(x.dps)&&x.dps>=0?x.dps/x.p:null;
+ let lo=x.lo,hi=x.hi;M.outRange=false;if(pos(lo)&&pos(hi)&&hi>lo){if(x.p<lo){lo=x.p;M.outRange=true}if(x.p>hi){hi=x.p;M.outRange=true}}else{lo=hi=null}
+ M.lo=lo;M.hi=hi;M.pos=lo!==null?clamp((x.p-lo)/(hi-lo)):null;M.range=lo!==null?(hi-lo)/x.p:null;
+ M.ind=indicators(x.t);
+ M.mom=M.ind?clamp((M.ind.ret20+.2)/.4)*100:(M.pos!==null?M.pos*100:null);M.momProxy=!M.ind;
+ M.stabAbs=M.ind?clamp(1-(M.ind.vol-.15)/.65)*100:(M.range!==null?clamp(1-(M.range-.2)/.8)*100:null);M.stabProxy=!M.ind;
+ M.valAbs=M.fpe?clamp((1/M.fpe-.02)/.10)*100:null;M.upAbs=M.up!==null?clamp(M.up/.4)*100:null;M.incAbs=M.yld!==null?clamp(M.yld/.06)*100:null;
+ M.grS=M.g!==null&&!M.gBad?clamp((M.g+.05)/.40)*100:null;
+ M.news=newsFor(x.t);M.flag=FLAGS[x.t]&&calDays(new Date(FLAGS[x.t].d+'T12:00:00Z'),NOW)<=30?FLAGS[x.t]:null;
+ M.close=closeTs(x.d,x.m);M.age=bizDays(M.close,NOW);M.fage=calDays(new Date(x.fd+'T12:00:00Z'),NOW);
+ M.earnIn=x.earn?Math.ceil(calDays(NOW,new Date(x.earn+'T12:00:00Z'))):null;
+ return M}
+const ALL={};
+function pctRank(key,mk){const xs=S.filter(x=>x.m===mk&&ALL[x.t]&&!ALL[x.t].bad&&ALL[x.t][key]!==null).map(x=>ALL[x.t][key]).sort((a,b)=>a-b);
+ return v=>{if(v===null||xs.length<2)return null;let below=0,eq=0;xs.forEach(y=>{if(y<v)below++;else if(y===v)eq++});return (below+(eq-1)/2)/(xs.length-1)*100}}
+function buildAll(){S.forEach(x=>{try{ALL[x.t]=metricsRaw(x)}catch(e){ALL[x.t]={bad:['data error']}}});
+ for(const mk of ['US','MY']){const R={valAbs:pctRank('valAbs',mk),upAbs:pctRank('upAbs',mk),incAbs:pctRank('incAbs',mk),stabAbs:pctRank('stabAbs',mk)};
+  S.filter(x=>x.m===mk).forEach(x=>{const M=ALL[x.t];if(M.bad)return;
+   const blend=k=>{const a=M[k];if(a===null)return null;const r=R[k](a);return r===null?a:.5*a+.5*r};
+   M.sc={val:blend('valAbs'),up:blend('upAbs'),gr:M.grS,mom:M.mom,dip:M.mom===null?null:100-M.mom,inc:blend('incAbs'),stab:blend('stabAbs'),news:(M.news.net+100)/2}})}}
+buildAll();
+
+/* ================= EVALUATE ================= */
+const RANKL=['Avoid','Reduce','Watchlist','Hold','Accumulate','Buy Candidate','Strong Buy Candidate'];
+const CC={'Avoid':'sell','Reduce':'sell','Watchlist':'watch','Hold':'hold','Accumulate':'buy','Buy Candidate':'buy','Strong Buy Candidate':'buy'};
+function tick(v,cur){if(cur!=='MYR')return .01;return v<1?.005:v<10?.01:v<100?.02:.1}
+const snapDn=(v,cur)=>{const t=tick(v,cur);return Math.floor(v/t+1e-9)*t};
+const snapNr=(v,cur)=>{const t=tick(v,cur);return Math.round(v/t)*t};
+function evaluate(x,sk){
+ const M=ALL[x.t];if(!M||M.bad)return {bad:true,why:M?M.bad:['missing']};
+ const st=STRAT[sk];let tw=0,sum=0;const used={},skipped=[];
+ for(const k in st.w){const v=M.sc[k];if(v===null||v===undefined||!isFinite(v)){skipped.push(COMP[k]);continue}used[k]=st.w[k];tw+=st.w[k];sum+=st.w[k]*v}
+ const raw=tw>=.5?sum/tw:NaN,score=isFinite(raw)?Math.round(raw):null; // need at least half the weight to score
+ let conf=100;const why=[];const dock=(n,t)=>{conf-=n;why.push(`${t} (−${n})`)};
+ if(M.age>2)dock(Math.min(50,6*(M.age-2)),`price is ${M.age} trading days old`);
+ if(!x.s2)dock(10,'price has only one source');
+ if(M.fage>30)dock(10,'valuation inputs over 30 days old');
+ if(M.fpe===null)dock(15,'no forward P/E');
+ if(M.up===null)dock(15,'no analyst target');
+ if(x.na<10)dock(5,'fewer than 10 analysts');
+ if(M.momProxy)dock(5,'momentum/volatility from 52-week range (no price history)');
+ if(M.gBad)dock(5,'implied growth looks distorted');
+ if(M.outRange)dock(5,'price outside stored 52-week range');
+ if(sk==='gro'&&x.m==='US'&&US.hv)dock(10,'momentum strategy in a high-volatility US market');
+ conf=Math.max(0,conf);
+ let cls=score===null?'Watchlist':score>=70?'Strong Buy Candidate':score>=62?'Buy Candidate':score>=55?'Accumulate':score>=47?'Hold':score>=40?'Watchlist':score>=33?'Reduce':'Avoid';
+ const caps=[];
+ if(cls==='Strong Buy Candidate'&&conf<75){cls='Buy Candidate';caps.push('Strong Buy needs confidence of 75+.')}
+ const capW=why=>{if(RANKL.indexOf(cls)>2)cls='Watchlist';caps.push(RANKL.indexOf(cls)<2?why.replace('Capped at Watchlist','Also flagged'):why)};
+ if(score===null)caps.push('No score: under half of the inputs could be calculated.');
+ if(M.age>5)capW('Capped at Watchlist: the price is over five trading days old. Refresh first.');
+ if(conf<60)capW('Capped at Watchlist: data confidence is below 60.');
+ if(M.news.severe)capW(`Capped at Watchlist: severe recent news (“${M.news.severe.h.slice(0,70)}…”).`);
+ if(M.flag)capW(`Capped at Watchlist: open event risk — ${M.flag.t}.`);
+ // trade plan
+ let plan=null;
+ if(M.up!==null){const sp=M.ind?clamp(1.5*M.ind.sdD*Math.sqrt(10),.05,.15):(M.range!==null?clamp(M.range*.2,.06,.15):.08);
+  const eHi=snapNr(x.p,x.cur);let eLo=snapNr(x.p*(1-sp/3),x.cur);if(M.lo!==null&&eLo<M.lo)eLo=snapNr(M.lo,x.cur);if(eLo>eHi)eLo=eHi;
+  const mid=(eLo+eHi)/2,stop=snapDn(mid*(1-sp),x.cur),tgt=snapDn(x.tgt,x.cur),rr=(tgt-mid)/(mid-stop);
+  plan={sp,eLo,eHi,mid,stop,tgt,rr,good:tgt>eHi&&rr>=1.5,basis:M.ind?'volatility':'range'}}
+ return {M,score,raw,conf,why,cls,cc:CC[cls],caps,plan,used,skipped,h:st.h}}
+
+/* ================= FORMAT ================= */
+const money=(v,c,dp)=>{if(!ok(v))return 'n/a';const d=dp??(c==='MYR'?(v<1?3:2):2);return (c==='MYR'?'RM':'$')+v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})};
+const pct=(v,d=1)=>ok(v)?(v>=0?'+':'')+(v*100).toFixed(d)+'%':'n/a';
+const sgn=v=>v>0?'up':v<0?'dn':'';
+const n1=(v,d=1)=>ok(v)?v.toFixed(d):'n/a';
+function ageTag(x){const M=ALL[x.t];const a=M&&!M.bad?M.age:99;return `${a>2?`<span class="stale">Stale · ${esc(fmtD(x.d))}</span>`:`EOD · ${esc(fmtD(x.d))}`} · ${x.s2?'2 sources':'1 source'}`}
+const scoreCell=s=>s===null?'<span class="mute">n/a</span>':`<div style="display:flex;gap:8px;align-items:center"><b style="width:2.2em;text-align:right">${s}</b><div class="bar" style="flex:1"><i style="width:${s}%;background:${s>=55?'var(--up)':s>=40?'var(--brown)':'var(--dn)'}"></i></div></div>`;
+let STRATK='bal';try{const v=localStorage.getItem('desk-strat');if(STRAT[v])STRATK=v}catch(e){}
+
+/* ================= COMMAND CENTRE ================= */
+function header(){
+ const rng=mk=>{const ds=S.filter(x=>x.m===mk).map(x=>x.d).sort();const lo=ds[0],hi=ds.at(-1),old=ds.filter(d=>d<hi).length;return lo===hi?`close ${fmtD(hi)} (all ${ds.length})`:`closes ${fmtD(lo)}–${fmtD(hi)} (${old} of ${ds.length} older than ${fmtD(hi)})`};
+ const snapAge=calDays(SNAP,NOW);
+ document.getElementById('asof').innerHTML=`${LIVE?`<span><b>Auto-updated</b> 3× a day from Yahoo Finance · ${S.length} stocks scored</span>`:''}<span>${LIVE?'Data updated':'Snapshot built'} ${esc(SNAP.toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kuala_Lumpur'}))} MYT${snapAge>=1?` · <b>${Math.floor(snapAge)} day${snapAge>=2?'s':''} old</b>`:''}</span><span>US stock prices: ${esc(rng('US'))}</span><span>Bursa stock prices: ${esc(rng('MY'))}</span>`;
+ const ban=document.getElementById('ageBanner');
+ if(snapAge>3){ban.hidden=false;ban.textContent=`This snapshot is ${Math.floor(snapAge)} days old. Prices, news and scores may be out of date — the automatic update may have stopped. Check the repository's Actions tab, or ask Claude to refresh it.`}
+}
+function kpis(){
+ document.getElementById('kpis').innerHTML=IDX.map(i=>{let ch='';if(!i.t){const cls=i.inv?'mute':sgn(i.c);ch=`<span class="${cls}" style="display:inline">${i.c>=0?'+':''}${i.c.toFixed(2)}%${i.inv?` (${esc(i.c>=0?i.inv[0]:i.inv[1])})`:''}</span> · ${esc(i.d)}`}
+  return `<div class="kpi"><span>${esc(i.k)}</span><b>${i.t?esc(i.t):i.v.toLocaleString('en-US',{minimumFractionDigits:i.dp??2,maximumFractionDigits:i.dp??2})}</b><span>${i.t?esc(i.s):ch}${i.x?` · ${esc(i.x)}`:''} · <a href="${esc(i.u)}">source</a></span></div>`}).join('');
+ document.getElementById('regchips').innerHTML=Object.entries(REGX).map(([k,r])=>`<button type="button" class="regbtn" data-reg="${k}" aria-expanded="false" aria-controls="regExplain"><span class="dot" style="background:${r.m.dot}"></span><span><span class="lab">${esc(r.lab)}</span><span class="val">${esc(r.m.val)}</span></span><span class="why">What does this mean?</span></button>`).join('');
+ document.getElementById('regime').innerHTML=Object.values(REGX).map(r=>`<p style="margin-top:8px"><b>${esc(r.lab)}: ${esc(r.m.val)}</b> <span class="mute sm">(${esc(r.m.term)})</span></p><ul class="ev sm">${r.ev.map(e=>`<li>${esc(e)}</li>`).join('')}</ul><p class="sm mute">${esc(r.m.rule)}</p>`).join('');
+ document.getElementById('cross').innerHTML=[
+ 'US chip rules and the reported Nvidia shipment halt hit Malaysia’s data-centre chain (YTL Power, Gamuda, Inari) harder than the KLCI.',
+ 'The US proposed extra tariffs of up to 18% on Malaysian goods on 25 Nov (25% possible); Malaysia wants the overall rate kept at 19%.',
+ 'A hawkish Fed keeps the dollar firm: USD/MYR rose from about 4.04 (5 Nov) to 4.11.',
+ 'Oil bounced to $94.61 on 25 Nov after a Houthi attack, adding to inflation worries.',
+ 'Bank Negara’s possible 2027 hike and Q3 growth of 5.5% favour Malaysian banks, which carried the index this week.'].map(t=>`<li>${esc(t)}</li>`).join('');
+ const C=[['2026-11-27','US markets: half-day session (close 1pm ET)','US'],['2026-11-27','IHH Healthcare Q3 results (estimated)','MY'],['2026-12-01','Coca-Cola ex-dividend','US'],['2026-12-02','NVIDIA ex-dividend','US'],['2026-12-09','FOMC decision (hike priced in)','US'],['2026-12-09','Inari ex-dividend (1.5 sen)','MY'],['2026-12-10','US November CPI','US'],['2027-01-21','Bank Negara MPC meeting','MY'],['2027-01-28','SD Guthrie dividend payment','MY']];
+ const today=NOW.toLocaleDateString('en-CA',{timeZone:'Asia/Kuala_Lumpur'});const up=C.filter(c=>c[0]>=today);
+ document.getElementById('cal').innerHTML=up.length?`<thead><tr><th>Date</th><th>Event</th><th>Market</th></tr></thead><tbody>${up.map(c=>`<tr><td style="white-space:nowrap">${esc(fmtDY(c[0]))}</td><td>${esc(c[1])}</td><td>${esc(c[2])}</td></tr>`).join('')}</tbody>`:'<tbody><tr><td>No upcoming events in this snapshot. Refresh to load new ones.</td></tr></tbody>';
+ const al=N.filter(n=>Math.abs(n.s)>=50&&evAge(n)<=21).sort((a,b)=>b.d.localeCompare(a.d)).slice(0,4);
+ document.getElementById('alerts').innerHTML=al.length?al.map(newsItem).join(''):'<p class="mute">No critical alerts in the last three weeks of this snapshot.</p>';
+}
+function topTable(){
+ const ranked=S.map(x=>({x,e:evaluate(x,STRATK)})).filter(r=>!r.e.bad).sort((a,b)=>(b.e.score??-1)-(a.e.score??-1)).slice(0,6);
+ document.getElementById('topTable').innerHTML=`<thead><tr><th>Stock</th><th class="n">Price</th><th>Score</th><th>Label</th></tr></thead><tbody>${ranked.map(({x,e})=>`<tr class="row" tabindex="0" data-t="${esc(x.t)}"><td><b>${esc(x.t)}</b> <span class="mute sm">${esc(x.n)}</span></td><td class="n">${money(x.p,x.cur)}</td><td>${scoreCell(e.score)}</td><td><span class="cls c-${e.cc}">${esc(e.cls)}</span></td></tr>`).join('')}</tbody>`}
+function newsItem(n){const c=n.s>=10?'s-pos':n.s<=-10?'s-neg':'s-neu',tks=Object.keys(n.tk);
+ return `<article class="item"><div class="score ${c}" aria-label="AI-judged impact score ${n.s}">${n.s>0?'+':''}${n.s}</div><div><b>${esc(n.h)}</b><div class="sm mute">${esc(fmtD(n.d))} · ${esc(n.cat)} · ${esc(n.dur)}${n.weak?' · secondary source':''} · ${n.src.map(s=>`<a href="${esc(s[1])}">${esc(s[0])}</a>`).join(', ')}</div><p class="sm" style="margin:4px 0 0">${esc(n.imp)}</p>${tks.length?`<div class="tags">${tks.map(t=>`<a class="chip" href="#stock-${esc(t.toLowerCase())}">${esc(t)}${n.tk[t]<1?` <span class="mute">×${n.tk[t]}</span>`:''}</a>`).join('')}</div>`:'<div class="tags"><span class="chip">Market-wide</span></div>'}</div></article>`}
+
+/* ================= CHART ================= */
+let chKey='us';const svg=document.getElementById('chart');
+function draw(){
+ const c=CH[chKey],W=svg.clientWidth,H2=svg.clientHeight;if(!W||!H2)return;
+ const narrow=W<520,pl=narrow?40:54,pr=narrow?84:128,pt=14,pb=30;
+ const ser=c.s.map(s=>({n:s.n,v:c.idx?s.v.map(v=>v/s.v[0]*100):s.v}));
+ const all=ser.flatMap(s=>s.v);if(c.ref)all.push(c.ref);
+ let mn=Math.min(...all),mx=Math.max(...all);const pad=(mx-mn)*.08||1;mn-=pad;mx+=pad;
+ const ts=c.x.map(d=>new Date(d+'T00:00:00Z').getTime()),t0=ts[0],t1=ts.at(-1);
+ const X=i=>pl+(W-pl-pr)*(c.time?(ts[i]-t0)/(t1-t0):i/(c.x.length-1)),Y=v=>pt+(H2-pt-pb)*(1-(v-mn)/(mx-mn));
+ const cols=['var(--mag)','var(--ink)','var(--brown)','var(--up)'];
+ let g='';for(let i=0;i<=5;i++){const v=mn+(mx-mn)*i/5;g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${pl-6}" y="${Y(v)+4}" text-anchor="end" font-size="12" fill="var(--mute)">${v.toFixed(c.idx?1:v>100?0:1)}</text>`}
+ let lastX=-99;c.x.forEach((d,i)=>{const x=X(i);if(x-lastX<(narrow?42:52))return;lastX=x;g+=`<text x="${x}" y="${H2-8}" text-anchor="middle" font-size="12" fill="var(--mute)">${esc(fmtD(d))}</text>`});
+ if(c.ref)g+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(c.ref)}" y2="${Y(c.ref)}" stroke="var(--dn)" stroke-dasharray="4 4"/><text x="${W-pr+6}" y="${Y(c.ref)+4}" font-size="12" fill="var(--dn)">20 = calm line</text>`;
+ const ends=[];
+ ser.forEach((s,k)=>{const col=cols[k%4];g+=`<polyline fill="none" stroke="${col}" stroke-width="${k?2:3}" points="${s.v.map((v,i)=>X(i)+','+Y(v)).join(' ')}"/>`+s.v.map((v,i)=>`<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="${col}"><title>${esc(s.n)} ${esc(fmtD(c.x[i]))}: ${v.toFixed(2)}</title></circle>`).join('');ends.push({y:Y(s.v.at(-1)),t:`${s.n} ${s.v.at(-1).toFixed(c.idx?1:2)}`,col})});
+ if(chKey==='vix'){const i=c.s[0].v.indexOf(Math.max(...c.s[0].v));g+=`<text x="${X(i)}" y="${Y(c.s[0].v[i])-10}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--mag)">Peak ${c.s[0].v[i]}</text>`}
+ ends.sort((a,b)=>a.y-b.y);for(let i=1;i<ends.length;i++)if(ends[i].y-ends[i-1].y<15)ends[i].y=ends[i-1].y+15;
+ ends.forEach(e=>g+=`<text x="${W-pr+6}" y="${e.y+4}" font-size="12" font-weight="600" fill="${e.col}">${esc(narrow?e.t.replace('Russell 2000','R2K').replace('S&P 500','S&P'):e.t)}</text>`);
+ svg.innerHTML=g;
+ document.getElementById('chartTitle').textContent=c.t;document.getElementById('chartNote').textContent=c.note;
+ document.getElementById('chartTable').innerHTML=`<thead><tr><th>Date</th>${c.s.map(s=>`<th class="n">${esc(s.n)}</th>`).join('')}</tr></thead><tbody>${c.x.map((d,i)=>`<tr><td>${esc(fmtDY(d))}</td>${c.s.map(s=>`<td class="n">${s.v[i].toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>`).join('')}</tr>`).join('')}</tbody>`}
+const ro=new ResizeObserver(draw);ro.observe(svg);
+document.querySelectorAll('[data-ch]').forEach(b=>b.addEventListener('click',()=>{chKey=b.dataset.ch;document.querySelectorAll('[data-ch]').forEach(o=>o.setAttribute('aria-pressed',o===b));draw()}));
+
+/* ================= STRATEGY + SCREENER ================= */
+document.querySelectorAll('.stratSel').forEach(s=>{s.innerHTML=Object.entries(STRAT).map(([k,v])=>`<option value="${k}">${esc(v.n)}</option>`).join('');s.value=STRATK;
+ s.addEventListener('change',()=>{STRATK=s.value;try{localStorage.setItem('desk-strat',STRATK)}catch(e){}document.querySelectorAll('.stratSel').forEach(o=>o.value=STRATK);topTable();screener()})});
+const fSec=document.getElementById('fSec');[...new Set(S.map(x=>x.sec))].sort().forEach(s=>fSec.insertAdjacentHTML('beforeend',`<option>${esc(s)}</option>`));
+try{const sv=JSON.parse(localStorage.getItem('desk-f')||'{}');for(const k in sv){const el=document.getElementById(k);if(el&&[...el.options].some(o=>o.value===sv[k]))el.value=sv[k]}}catch(e){}
+function screener(){
+ const sk=STRATK,mk=document.getElementById('fMkt').value,sec=fSec.value,min=+document.getElementById('fMin').value,so=document.getElementById('fSort').value;
+ try{localStorage.setItem('desk-f',JSON.stringify({fMkt:mk,fSec:sec,fMin:String(min),fSort:so}))}catch(e){}
+ document.getElementById('stratNote').textContent=`${STRAT[sk].n}: ${STRAT[sk].note} Weights: ${Object.entries(STRAT[sk].w).map(([k,v])=>COMP[k]+' '+Math.round(v*100)+'%').join(', ')}.`;
+ const rows=S.filter(x=>(mk==='ALL'||x.m===mk)&&(sec==='ALL'||x.sec===sec)).map(x=>({x,e:evaluate(x,sk)})).filter(r=>r.e.bad||(r.e.score??-1)>=min);
+ const key={score:r=>-(r.e.score??-1),up:r=>-(r.e.M?.up??-9),yld:r=>-(r.e.M?.yld??-9),fpe:r=>r.e.M?.fpe??999,conf:r=>-(r.e.conf??0)}[so];rows.sort((a,b)=>key(a)-key(b));
+ document.getElementById('scrTable').innerHTML=`<thead><tr><th>Stock</th><th>Mkt</th><th class="n">Price</th><th class="n">Day</th><th>Score</th><th>Label</th><th class="n">Upside</th><th class="n">Fwd P/E</th><th class="n">Yield</th><th class="n">Confidence</th></tr></thead><tbody>${rows.length?rows.map(({x,e})=>e.bad?`<tr><td><b>${esc(x.t)}</b></td><td colspan="9" class="dn">Excluded: ${esc(e.why.join(', '))}</td></tr>`:`<tr class="row" tabindex="0" data-t="${esc(x.t)}"><td><b>${esc(x.t)}</b><br><span class="sm mute">${esc(x.n)} · ${esc(x.sec)}</span></td><td>${esc(x.m)}</td><td class="n">${money(x.p,x.cur)}<br><span class="sm">${ageTag(x)}</span></td><td class="n ${sgn(x.ch)}">${x.ch>=0?'+':''}${x.ch.toFixed(2)}%</td><td style="min-width:140px">${scoreCell(e.score)}</td><td><span class="cls c-${e.cc}">${esc(e.cls)}</span>${e.caps.length?'<br><span class="sm wn">capped</span>':''}</td><td class="n ${sgn(e.M.up)}">${pct(e.M.up,0)}</td><td class="n">${n1(e.M.fpe)}</td><td class="n">${e.M.yld===null?'n/a':(e.M.yld*100).toFixed(1)+'%'}</td><td class="n">${e.conf}</td></tr>`).join(''):`<tr><td colspan="10">No stocks match these filters. Lower the minimum score or widen the market.</td></tr>`}</tbody>`}
+['fMkt','fSec','fMin','fSort'].forEach(id=>document.getElementById(id).addEventListener('change',screener));
+document.addEventListener('click',ev=>{const r=ev.target.closest('tr.row');if(r)location.hash='stock-'+r.dataset.t.toLowerCase()});
+document.addEventListener('keydown',ev=>{const r=ev.target.closest&&ev.target.closest('tr.row');if(r&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();location.hash='stock-'+r.dataset.t.toLowerCase()}});
+
+/* ================= STOCK FILE ================= */
+let sizer={acct:10000,risk:1};try{Object.assign(sizer,JSON.parse(localStorage.getItem('desk-size')||'{}'))}catch(e){}
+function sizeOut(x,e){const P=e.plan;if(!P)return '';const acctLocal=x.cur==='USD'?sizer.acct/FX:sizer.acct,risk=acctLocal*sizer.risk/100,per=P.mid-P.stop;
+ if(!(per>0)||!(acctLocal>0))return '<p class="sm mute">Enter an account size and risk % above.</p>';
+ let sh=Math.floor(risk/per);const lot=x.m==='MY'?100:1;sh=Math.floor(sh/lot)*lot;let capped=false;const maxSh=Math.floor(acctLocal/P.mid/lot)*lot;if(sh>maxSh){sh=maxSh;capped=true}
+ if(sh<=0)return `<p class="sm">Risking ${sizer.risk}% (${money(risk,x.cur)}) is less than ${x.m==='MY'?'one 100-share lot':'one share'} at this stop distance (${money(per*lot,x.cur)} per ${x.m==='MY'?'lot':'share'}). Increase the account size or risk %.</p>`;
+ const cost=sh*P.mid;return `<p class="sm"><b>${sh.toLocaleString('en-US')} share${sh===1?'':'s'}${x.m==='MY'?` (${sh/100} lot${sh/100>1?'s':''})`:''}</b> at about ${money(P.mid,x.cur)} costs ${money(cost,x.cur)}${x.cur==='USD'?` (≈ RM${(cost*FX).toLocaleString('en-US',{maximumFractionDigits:0})})`:''}, ${(cost/acctLocal*100).toFixed(0)}% of the account. A stop-out would lose about ${money(sh*per,x.cur)}${capped?'. Capped by the account size':''}. Brokerage fees not included.</p>`}
+function stockFile(t){
+ const x=S.find(s=>s.t.toLowerCase()===t);const box=document.getElementById('stockFile');
+ if(!x){box.innerHTML=`<h2>Stock not found</h2><p><a href="#screener">Back to the screener</a></p>`;return}
+ const sk=STRATK,e=evaluate(x,sk);
+ if(e.bad){box.innerHTML=`<h2>${esc(x.n)}</h2><p class="dn">Excluded from scoring: ${esc(e.why.join(', '))}.</p><p><a href="#screener">Back to the screener</a></p>`;return}
+ const M=e.M,P=e.plan,alt=x.cur==='USD'?`≈ RM${(x.p*FX).toFixed(2)}`:`≈ $${(x.p/FX).toFixed(2)}`;
+ const news=M.news.parts.sort((a,b)=>b.e.d.localeCompare(a.e.d));
+ const planHtml=P?`${P.good?'':`<div class="warnbox"><b>${P.tgt<=P.eHi?'No upside to the consensus target':'Poor reward/risk ('+P.rr.toFixed(1)+' : 1)'}</b>: below the 1.5 : 1 minimum, so this setup is not worth taking on these numbers.</div>`}
+ <dl class="kv"><dt>Entry zone</dt><dd>${money(P.eLo,x.cur)} – ${money(P.eHi,x.cur)}</dd><dt>Target (consensus)</dt><dd>${money(P.tgt,x.cur)} <span class="${sgn(P.tgt-P.mid)}">(${pct(P.tgt/P.mid-1)} from entry mid)</span></dd><dt>Stop / invalidation</dt><dd>${money(P.stop,x.cur)} <span class="dn">(${pct(P.stop/P.mid-1)})</span></dd><dt>Reward / risk</dt><dd class="${P.good?'':'wn'}">${P.rr>0?P.rr.toFixed(1)+' : 1':'none'}</dd><dt>Horizon</dt><dd>${esc(e.h)}</dd></dl>
+ <p class="sm mute" style="margin-top:8px">Stop distance ${(P.sp*100).toFixed(1)}% = ${P.basis==='volatility'?`1.5 × daily volatility (${(M.ind.sdD*100).toFixed(2)}%) × √10`:`20% of the 52-week range ÷ price (${(M.range*100).toFixed(0)}%)`}, bounded ${P.basis==='volatility'?'5':'6'}–15%. Reward/risk is from the entry midpoint ${money(P.mid,x.cur,x.cur==='MYR'?3:2)}. Prices snapped to ${x.m==='MY'?'Bursa tick sizes':'cents'}.</p>
+ <h3 style="margin-top:14px">Position size</h3>
+ <div class="sizer"><label>Account size (RM)<input id="szA" type="number" inputmode="decimal" min="0" step="100" value="${esc(sizer.acct)}"></label><label>Risk per trade (%)<input id="szR" type="number" inputmode="decimal" min="0.1" max="10" step="0.1" value="${esc(sizer.risk)}"></label></div>
+ <div id="szOut">${sizeOut(x,e)}</div>`:`<p><b>No trade plan:</b> there is no analyst target for this stock.</p>`;
+ box.innerHTML=`<p class="sm"><a href="#screener">← Screener</a></p>
+ <div class="file"><div>
+ <h2 style="margin-bottom:4px">${esc(x.n)} <span class="mute">${esc(x.t)} · ${esc(x.ex)}</span></h2>
+ <p class="mute sm">${esc(x.sec)} · market cap ${esc(x.mc)} · ${esc(x.an)} consensus from ${x.na} analysts</p>
+ <div style="display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;margin:10px 0"><div class="big">${money(x.p,x.cur)}</div><div><span class="${sgn(x.ch)}"><b>${x.ch>=0?'+':''}${x.ch.toFixed(2)}%</b></span> <span class="mute">${alt} at ${FX}</span><br><span class="sm">${ageTag(x)}</span></div></div>
+ <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span class="cls c-${e.cc}" style="font-size:15px">${esc(e.cls)}</span><span class="chip">Score ${e.score??'n/a'} · ${esc(STRAT[sk].n)}</span><span class="chip">Data confidence ${e.conf}</span><label class="sm mute" style="display:flex;gap:6px;align-items:center">Strategy <select id="sfStrat" class="stratSel2"></select></label></div>
+ ${e.caps.map(c=>`<div class="warnbox">${esc(c)}</div>`).join('')}
+ ${M.earnIn!==null&&M.earnIn>=0&&M.earnIn<=7?`<div class="warnbox">Earnings due ${M.earnIn===0?'today':`in ${M.earnIn} day${M.earnIn>1?'s':''}`}: the price can gap either way.</div>`:''}
+ <h3 style="margin-top:18px">52-week range and the plan</h3>
+ <div class="fig rng"><svg id="rng" role="img" aria-label="Price range with stop, entry, price and target"></svg></div>
+ ${planHtml}
+ <p class="sm" style="margin-top:12px"><b>Not financial advice.</b> The label and plan are formula outputs.</p>
+ </div><div>
+ <h3>Score breakdown (${esc(STRAT[sk].n)})</h3>
+ <div class="brk">${Object.keys(STRAT[sk].w).map(k=>{const v=M.sc[k],u=k in e.used;const tag=(k==='mom'||k==='dip')&&M.momProxy||k==='stab'&&M.stabProxy?' · proxy':'';return `<div><span>${COMP[k]} <span class="mute">${u?Math.round(e.used[k]/Object.values(e.used).reduce((a,b)=>a+b,0)*100)+'%':'n/a'}${tag}</span></span><div class="bar"><i style="width:${u?v.toFixed(0):0}%"></i></div><b style="text-align:right">${u?v.toFixed(0):'–'}</b></div>`}).join('')}</div>
+ ${e.skipped.length?`<p class="sm mute" style="margin-top:6px">Left out (couldn’t be calculated reliably): ${esc(e.skipped.join(', '))}. Other weights scaled up.</p>`:''}
+ <h3 style="margin-top:16px">Same stock, every strategy</h3>
+ <div class="scroll"><table class="sm"><thead><tr><th>Strategy</th><th class="n">Score</th><th>Label</th><th class="n">Conf.</th></tr></thead><tbody>${Object.keys(STRAT).map(k=>{const q=evaluate(x,k);return `<tr><td>${esc(STRAT[k].n)}</td><td class="n">${q.score??'n/a'}</td><td><span class="cls c-${q.cc}">${esc(q.cls)}</span></td><td class="n">${q.conf}</td></tr>`}).join('')}</tbody></table></div>
+ <h3 style="margin-top:16px">Valuation, growth and trend</h3>
+ <dl class="kv"><dt>P/E (trailing, at today’s price)</dt><dd>${n1(M.pe)}</dd><dt>Forward P/E</dt><dd>${n1(M.fpe)}</dd><dt>Implied next-year EPS growth</dt><dd class="${M.gBad?'wn':sgn(M.g)}">${pct(M.g)}${M.gBad?' (unreliable)':''}</dd><dt>Dividend yield</dt><dd>${M.yld===null?'n/a':(M.yld*100).toFixed(2)+'%'}</dd><dt>52-week range</dt><dd>${money(M.lo,x.cur)} – ${money(M.hi,x.cur)}</dd><dt>Position in range</dt><dd>${M.pos===null?'n/a':(M.pos*100).toFixed(0)+'%'}</dd>
+ ${M.ind?`<dt>20-day return</dt><dd class="${sgn(M.ind.ret20)}">${pct(M.ind.ret20)}</dd><dt>Volatility (annualised, 20d)</dt><dd>${(M.ind.vol*100).toFixed(0)}%</dd><dt>RSI (14)</dt><dd>${M.ind.rsi.toFixed(0)} <span class="mute">${M.ind.rsi>70?'overbought':M.ind.rsi<30?'oversold':'neutral'}</span></dd>`:`<dt>20-day return, volatility, RSI</dt><dd class="mute">no price history</dd>`}</dl>
+ <p class="sm mute">Confidence: ${e.why.length?esc(e.why.join('; ')):'all inputs current and confirmed'}.</p>
+ </div></div>
+ <h3 style="margin-top:24px">Live chart <span class="mute sm">(TradingView · ${esc(tvSym(x))})</span></h3>
+ <div id="tvStock" class="tvbox" style="height:420px"></div>
+ <div class="grid2" style="margin-top:24px"><div>
+ <h3>News affecting ${esc(x.t)} <span class="mute sm">net score ${M.news.net>0?'+':''}${M.news.net.toFixed(0)}</span></h3>
+ <p class="sm mute">Contribution = event score × relevance × recency${news.some(p=>p.e.weak)?' (× 0.5 for secondary sources)':''}. Event scores are AI judgements; the sum is calculated.</p>
+ ${news.length?`<div class="scroll"><table class="sm"><thead><tr><th>Event</th><th class="n">Score</th><th class="n">Relevance</th><th class="n">Recency</th><th class="n">Adds</th></tr></thead><tbody>${news.map(p=>`<tr><td>${esc(fmtD(p.e.d))} · ${esc(p.e.h)}</td><td class="n">${p.e.s>0?'+':''}${p.e.s}</td><td class="n">${p.rel}</td><td class="n">${p.dec.toFixed(2)}</td><td class="n ${sgn(p.c)}">${p.c>0?'+':''}${p.c.toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="mute">No events tagged to this stock in the snapshot, so its news score is neutral (0).</p>'}
+ </div><div><h3>Catalysts <span class="mute sm">(AI summary)</span></h3><ul class="ev">${x.cat.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>
+ <h3 style="margin-top:12px">Risks — what would invalidate the thesis</h3><ul class="ev">${x.rk.map(c=>`<li>${esc(c)}</li>`).join('')}${P?`<li>A close below ${money(P.stop,x.cur)}.</li>`:''}</ul>
+ <h3 style="margin-top:12px">Sources and timestamps</h3><ul class="ev sm"><li>Price ${money(x.p,x.cur)}, close ${esc(fmtDY(x.d))} — <a href="${esc(x.pu)}">${esc(x.ps)}</a> (${x.s2?'confirmed by a second source':'single source'})</li><li>P/E, forward P/E, 52-week range, consensus: as of ${esc(fmtDY(x.fd))} — <a href="${esc(x.fu||x.pu)}">source</a></li>${M.ind?`<li>Price history (${M.ind.n} closes${M.ind.gaps?`, ${M.ind.gaps} missing day`:''}): StockAnalysis / Yahoo Finance history pages</li>`:''}<li>Scores, confidence, news sum and plan: calculated on this page (see <a href="#method">Method</a>).</li></ul></div></div>`;
+ const s2=document.getElementById('sfStrat');s2.innerHTML=Object.entries(STRAT).map(([k,v])=>`<option value="${k}">${esc(v.n)}</option>`).join('');s2.value=STRATK;
+ s2.addEventListener('change',()=>{STRATK=s2.value;try{localStorage.setItem('desk-strat',STRATK)}catch(er){}document.querySelectorAll('.stratSel').forEach(o=>o.value=STRATK);topTable();screener();stockFile(t)});
+ const upd=()=>{const a=parseFloat(document.getElementById('szA').value),r=parseFloat(document.getElementById('szR').value);sizer={acct:a>0?a:0,risk:r>0?Math.min(r,10):0};try{localStorage.setItem('desk-size',JSON.stringify(sizer))}catch(er){}document.getElementById('szOut').innerHTML=sizeOut(x,e)};
+ if(P){document.getElementById('szA').addEventListener('input',upd);document.getElementById('szR').addEventListener('input',upd)}
+ const r=document.getElementById('rng');
+ const lo=Math.min(M.lo??x.p,P?P.stop:x.p,x.p),hi=Math.max(M.hi??x.p,P?P.tgt:x.p,x.p);
+ const dr=()=>{const W=r.clientWidth;if(!W)return;const pl=12,pr=12,X=v=>pl+(W-pl-pr)*(v-lo)/((hi-lo)||1),y=62;
+  let g='';if(M.lo!==null)g+=`<rect x="${X(M.lo)}" y="${y-5}" width="${X(M.hi)-X(M.lo)}" height="10" rx="5" fill="var(--sea)"/>`;
+  if(P)g+=`<rect x="${X(P.eLo)}" y="${y-12}" width="${Math.max(3,X(P.eHi)-X(P.eLo))}" height="24" fill="var(--mag)" opacity=".28"/>`;
+  const anc=v=>X(v)<70?'start':X(v)>W-70?'end':'middle';
+  const mk=(v,lab,col,row)=>`<line x1="${X(v)}" x2="${X(v)}" y1="${y-16}" y2="${y+16}" stroke="${col}" stroke-width="2.5"/><text x="${X(v)}" y="${row===2?y-40:row===1?y-22:y+34}" text-anchor="${row===0?(v===M.lo?'start':'end'):anc(v)}" font-size="12" font-weight="600" fill="${col}">${esc(lab)}</text>`;
+  if(M.lo!==null)g+=mk(M.lo,'52w low','var(--mute)',0)+mk(M.hi,'52w high','var(--mute)',0);
+  if(P){g+=mk(P.stop,'Stop '+money(P.stop,x.cur),'var(--dn)',2);g+=mk(P.tgt,'Target '+money(P.tgt,x.cur),'var(--up)',1)}
+  g+=`<circle cx="${X(x.p)}" cy="${y}" r="8" fill="var(--ink)" stroke="var(--bg)" stroke-width="2"/><text x="${X(x.p)}" y="${y+54}" text-anchor="${anc(x.p)}" font-size="13" font-weight="800" fill="var(--ink)">Now ${money(x.p,x.cur)}</text>`;
+  r.innerHTML=g};
+ tvWidget(document.getElementById('tvStock'),'advanced-chart',{autosize:true,symbol:tvSym(x),interval:'D',timezone:'Asia/Kuala_Lumpur',theme:dark()?'dark':'light',style:'1',allow_symbol_change:false,hide_top_toolbar:false,support_host:'https://www.tradingview.com'});
+ if(window.__rro)window.__rro.disconnect();window.__rro=new ResizeObserver(dr);window.__rro.observe(r);
+}
+
+/* ================= NEWS VIEW ================= */
+function newsView(){const mk=document.getElementById('nMkt').value,im=document.getElementById('nImp').value;
+ const L=N.filter(n=>(mk==='ALL'||n.mk.includes(mk))&&(im==='ALL'||(im==='NEG'&&n.s<0)||(im==='POS'&&n.s>0)||(im==='BIG'&&Math.abs(n.s)>=40))).sort((a,b)=>b.d.localeCompare(a.d));
+ document.getElementById('newsList').innerHTML=L.length?L.map(newsItem).join(''):'<p class="mute">Nothing matches these filters.</p>'}
+['nMkt','nImp'].forEach(id=>document.getElementById(id).addEventListener('change',newsView));
+
+/* ================= SOURCES ================= */
+const srcs=new Map();IDX.forEach(i=>srcs.set(i.u,i.k));S.forEach(x=>{srcs.set(x.pu,x.t+' price');if(x.fu)srcs.set(x.fu,x.t+' fundamentals')});N.forEach(n=>n.src.forEach(s=>srcs.set(s[1],s[0])));
+srcs.set('https://ceoeconomy.com/article/vix-closes-at-2026-high-35-89-wall-street-fear-gauge-nov-2026','VIX 16–20 Nov closes');srcs.set('https://www.zacks.com/stock/news/3000627/stock-market-news-for-oct-6-2026','Nasdaq record close');
+document.getElementById('srcList').innerHTML=[...srcs].map(([u,l])=>`<li><a href="${esc(u)}">${esc(l)}</a> <span class="mute">— ${esc(new URL(u).hostname.replace('www.',''))}</span></li>`).join('');
+
+/* ================= MOOD EXPLAINER ================= */
+const rx=document.getElementById('regExplain');
+document.getElementById('regchips').addEventListener('click',ev=>{const b=ev.target.closest('[data-reg]');if(!b)return;
+ const open=b.getAttribute('aria-expanded')==='true';document.querySelectorAll('[data-reg]').forEach(o=>o.setAttribute('aria-expanded','false'));
+ if(open){rx.hidden=true;return}
+ const r=REGX[b.dataset.reg];b.setAttribute('aria-expanded','true');
+ rx.innerHTML=`<button type="button" class="close" id="rxClose">Close</button><h3>${esc(r.lab)}: ${esc(r.m.val)}</h3><p>${esc(r.mean)}</p><p class="ana">${esc(r.ana)}</p><p class="sm"><b>The numbers behind it</b></p><ul class="sm">${r.ev.map(e=>`<li>${esc(e)}</li>`).join('')}</ul><p class="sm"><b>What it means on this dashboard:</b> ${esc(r.page)}</p><p class="sm mute">Experts call this ${esc(r.m.term)}. ${esc(r.m.rule)} <a href="#" id="rxMore">See the full market details</a></p>`;
+ rx.hidden=false});
+rx.addEventListener('click',ev=>{if(ev.target.id==='rxClose'){rx.hidden=true;document.querySelectorAll('[data-reg]').forEach(o=>o.setAttribute('aria-expanded','false'))}
+ if(ev.target.id==='rxMore'){ev.preventDefault();document.getElementById('moodPanel').scrollIntoView({behavior:'smooth',block:'start'})}});
+
+/* ================= ASK CLAUDE ================= */
+const chat=document.getElementById('chat'),st=document.getElementById('askStatus'),qEl=document.getElementById('q');let hist=[],busy=false,sample=null,gen=0,ctrl=null;
+const PR=['Which 3 stocks look best for a dividend investor, and why?','Why is NVDA capped at Watchlist?','How might the December Fed hike affect Bursa?','Compare Maybank, CIMB and Public Bank','Which stocks carry the most risk right now?'];
+document.getElementById('prompts').innerHTML=PR.map(p=>`<button type="button" class="sm" data-p="${esc(p)}">${esc(p)}</button>`).join('');
+document.getElementById('prompts').addEventListener('click',ev=>{const b=ev.target.closest('[data-p]');if(b){qEl.value=b.dataset.p;ask()}});
+function snapshot(){const sk=STRATK;return JSON.stringify({snapshotBuilt:'27 Nov 2026 10:00 MYT',viewerNow:NOW.toISOString(),usdmyr:FX,
+ usMood:{label:US.val,term:US.term,rule:US.rule},bursaMood:{label:MY.val,term:MY.term,rule:MY.rule},
+ macro:IDX.map(i=>({k:i.k,v:i.t||i.v,chg:i.c,when:i.d||i.s,note:i.x})),
+ strategy:{name:STRAT[sk].n,weights:STRAT[sk].w},labelBands:'70+ Strong Buy (conf 75+), 62+ Buy, 55+ Accumulate, 47+ Hold, 40+ Watchlist, 33+ Reduce, <33 Avoid; capped at Watchlist if price >5 trading days old, confidence <60, severe recent news, or open event risk. Bands not backtested.',
+ stocks:S.map(x=>{const e=evaluate(x,sk);if(e.bad)return {t:x.t,excluded:e.why};const M=e.M,P=e.plan;return {t:x.t,name:x.n,mkt:x.m,sector:x.sec,cur:x.cur,price:x.p,priceDate:x.d,priceAgeTradingDays:M.age,twoSources:x.s2,dayChg:x.ch,
+  score:e.score,label:e.cls,caps:e.caps,conf:e.conf,confReasons:e.why,subScores:Object.fromEntries(Object.entries(M.sc).map(([k,v])=>[k,v===null?null:Math.round(v)])),weightsUsed:e.used,leftOut:e.skipped,
+  pe:M.pe&&+M.pe.toFixed(1),fpe:M.fpe&&+M.fpe.toFixed(1),impliedEpsGrowth:pct(M.g),growthUnreliable:M.gBad,yield:M.yld===null?null:(M.yld*100).toFixed(2)+'%',range52:[M.lo,M.hi],target:x.tgt,upside:pct(M.up),consensus:x.an+' ('+x.na+')',fundamentalsDate:x.fd,
+  ret20:M.ind?pct(M.ind.ret20):'n/a',vol20:M.ind?(M.ind.vol*100).toFixed(0)+'%':'n/a',rsi14:M.ind?Math.round(M.ind.rsi):'n/a',
+  plan:P?{entry:[P.eLo,P.eHi],stop:P.stop,target:P.tgt,rewardRisk:+P.rr.toFixed(2),worthTaking:P.good}:null,
+  newsNet:Math.round(M.news.net),newsParts:M.news.parts.map(p=>({event:p.e.h,score:p.e.s,relevance:p.rel,recency:+p.dec.toFixed(2),adds:+p.c.toFixed(1)})),openRisk:M.flag?M.flag.t:null,catalysts:x.cat,risks:x.rk}}),
+ news:N.map(n=>({date:n.d,headline:n.h,score:n.s,tickers:n.tk,impact:n.imp}))}).replace(/</g,'\\u003c')}
+function bubble(cls,text){const d=document.createElement('div');d.className='msg '+cls;d.textContent=text;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d}
+async function ask(){const q=qEl.value.trim();if(!q||busy)return;
+ if(!sample){st.textContent='Ask AI is not available in this view. Open the page on claude.ai to use it.';return}
+ busy=true;const my=++gen;document.getElementById('askBtn').disabled=true;const ub=bubble('u',q);qEl.value='';const a=bubble('a','Thinking…');st.textContent='';
+ const sys=`You are the research assistant inside an investment dashboard covering 10 US and 10 Bursa Malaysia stocks. Answer ONLY from the JSON snapshot below. Never invent prices, figures, news or targets; if the answer needs data not in the snapshot, say so and suggest refreshing the dashboard. When explaining a score, use subScores, weightsUsed, confReasons and caps. Separate (1) facts from the snapshot, (2) calculated metrics, (3) your interpretation. Mention price dates when stale. Labels are formula outputs, not advice; end with a one-line reminder that this is not financial advice. Be concise (under 220 words), plain text, short paragraphs or simple dashes.\n\nSNAPSHOT:\n${snapshot()}`;
+ const recent=hist.slice(-6);
+ const msgs=[{role:'user',content:sys+'\n\n(Start of conversation.)'},{role:'assistant',content:'Understood. I will answer only from this snapshot.'},...recent,{role:'user',content:q}];
+ ctrl=new AbortController();
+ try{const r=await sample(msgs,{cache:false,signal:ctrl.signal,onText:({text})=>{if(my===gen)a.textContent=text}});
+  if(my!==gen)return;a.textContent=r.text;hist.push({role:'user',content:q},{role:'assistant',content:r.text});if(hist.length>12)hist=hist.slice(-12)}
+ catch(err){if(my!==gen)return;a.remove();ub.remove();qEl.value=q;
+  st.textContent=err&&err.code==='rate_limited'?'The AI is busy. Your question is back in the box; try again in a minute.':err&&err.code==='not_granted'?'Permission to use Ask AI was not granted.':'The AI could not answer just now. Your question is back in the box.'}
+ finally{if(my===gen){busy=false;document.getElementById('askBtn').disabled=false}}}
+document.getElementById('askForm').addEventListener('submit',ev=>{ev.preventDefault();ask()});
+qEl.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&!ev.shiftKey&&!ev.isComposing){ev.preventDefault();ask()}});
+document.getElementById('clearBtn').addEventListener('click',()=>{gen++;if(ctrl)try{ctrl.abort()}catch(e){}hist=[];chat.innerHTML='';busy=false;document.getElementById('askBtn').disabled=false;st.textContent=''});
+if(window.claude&&window.claude.use){claude.use('sample').then(s=>{sample=s;if(!s)st.textContent='Ask AI is not available in this view.'}).catch(()=>{st.textContent='Ask AI is not available in this view.'})}else st.textContent='Ask AI works when this page is opened on claude.ai.';
+
+/* ================= TRADINGVIEW WIDGETS ================= */
+const dark=()=>{const t=document.documentElement.dataset.theme;return t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches};
+function tvWidget(box,kind,cfg){if(!box)return;box.innerHTML='';const c=document.createElement('div');c.className='tradingview-widget-container';c.style.height='100%';c.style.width='100%';const w=document.createElement('div');w.className='tradingview-widget-container__widget';w.style.height='100%';c.appendChild(w);
+ const sc=document.createElement('script');sc.src='https://s3.tradingview.com/external-embedding/embed-widget-'+kind+'.js';sc.async=true;sc.textContent=JSON.stringify(Object.assign({locale:'en',colorTheme:dark()?'dark':'light',isTransparent:false},cfg));c.appendChild(sc);box.appendChild(c);
+ setTimeout(()=>{if(!box.querySelector('iframe'))box.innerHTML='<p class="tvfail">The live TradingView view could not load here. It works on the website version of this dashboard (GitHub Pages) with an internet connection.</p>'},8000)}
+let liveDone=false,chartSym='FTSEMYX:FBMKLCI',scrMk='malaysia';
+function liveChart(){tvWidget(document.getElementById('tvChart'),'advanced-chart',{autosize:true,symbol:chartSym,interval:'D',timezone:'Asia/Kuala_Lumpur',theme:dark()?'dark':'light',style:'1',allow_symbol_change:true,hide_side_toolbar:false,support_host:'https://www.tradingview.com'})}
+function liveScreener(){tvWidget(document.getElementById('tvScreener'),'screener',{width:'100%',height:'100%',defaultColumn:'overview',defaultScreen:'most_capitalized',market:scrMk,showToolbar:true})}
+function liveView(){if(liveDone)return;liveDone=true;
+ tvWidget(document.getElementById('tvTape'),'ticker-tape',{symbols:[{proName:'FOREXCOM:SPXUSD',title:'S&P 500'},{proName:'FOREXCOM:NSXUSD',title:'Nasdaq 100'},{proName:'FTSEMYX:FBMKLCI',title:'FBM KLCI'},{proName:'FX_IDC:USDMYR',title:'USD/MYR'},{proName:'TVC:UKOIL',title:'Brent'},...S.slice(0,20).map(x=>({proName:tvSym(x),title:x.t}))],showSymbolLogo:true,displayMode:'adaptive'});
+ const picks=[['FBM KLCI','FTSEMYX:FBMKLCI'],['S&P 500','FOREXCOM:SPXUSD'],...S.slice(0,20).map(x=>[x.t,tvSym(x)]),['NATGATE','MYX:NATGATE']];
+ document.getElementById('tvPicks').innerHTML=picks.map(([l,v])=>`<button type="button" class="sm" data-sym="${esc(v)}" aria-pressed="${v===chartSym}">${esc(l)}</button>`).join('');
+ document.getElementById('tvPicks').addEventListener('click',ev=>{const b=ev.target.closest('[data-sym]');if(!b)return;chartSym=b.dataset.sym;document.querySelectorAll('#tvPicks [data-sym]').forEach(o=>o.setAttribute('aria-pressed',o===b));liveChart()});
+ document.querySelectorAll('[data-scr]').forEach(b=>b.addEventListener('click',()=>{scrMk=b.dataset.scr;document.querySelectorAll('[data-scr]').forEach(o=>o.setAttribute('aria-pressed',o===b));liveScreener()}));
+ liveChart();liveScreener()}
+
+/* ================= ROUTER ================= */
+function route(){const h=(location.hash||'#command').slice(1);let v=h.startsWith('stock-')?'stock':h;if(!['command','live','screener','stock','news','ask','method'].includes(v))v='command';
+ document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+ document.querySelectorAll('.nav a:not(.brand)').forEach(a=>{if(a.getAttribute('href')==='#'+(v==='stock'?'screener':v))a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+ if(v==='live')liveView();if(v==='screener')screener();if(v==='stock')stockFile(h.slice(6));if(v==='news')newsView();if(v==='command'){topTable();draw()}
+ window.scrollTo(0,0)}
+header();kpis();topTable();screener();newsView();addEventListener('hashchange',route);route();
+window.__desk={evaluate,S,ALL,metricsRaw,buildAll,US,MY};
+}
+(async()=>{try{const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),6000);const r=await fetch('data/desk.json',{cache:'no-store',signal:ctl.signal});clearTimeout(tm);if(r.ok)mergeLive(await r.json())}catch(e){}
+ try{start()}catch(e){document.body.insertAdjacentHTML('afterbegin','<p style="padding:16px">The page could not start. Please reload.</p>');console.error(e)}})();
+}
+</script>
+</body>
+</html>

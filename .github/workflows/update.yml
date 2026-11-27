@@ -1,0 +1,36 @@
+name: Update data
+
+on:
+  schedule:
+    # Times are UTC. MYT = UTC+8.
+    - cron: "45 4 * * 1-5"    # 12:45pm MYT — Bursa midday break
+    - cron: "20 9 * * 1-5"    # 5:20pm MYT — after Bursa close
+    - cron: "40 21 * * 1-5"   # 5:40am MYT (Tue–Sat) — after US close
+  workflow_dispatch: {}       # "Run workflow" button for a manual refresh
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python scripts/update.py
+      - name: Commit new data
+        run: |
+          git config user.name "investment-desk-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/data/desk.json
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "Data update $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
