@@ -3,7 +3,7 @@
 A personal research dashboard for US and Bursa Malaysia stocks: https://abc123286.github.io/investment-desk/
 
 - **Live market**: TradingView charts and a whole-market screener for US stocks; a Bursa price board from Yahoo Finance (about 15 minutes delayed).
-- **Scored stocks**: about 70 stocks (20 researched plus large caps from both markets) get a 0–100 score, a data-confidence score, a label and a trade plan.
+- **Whole market**: every Bursa stock and US companies worth $2B+ (a few thousand) from Yahoo's market screener; about 70 "core" stocks (20 researched) also get price history and analyst targets. Each get a 0–100 score, a data-confidence score, a label and a trade plan.
 - **Locked signals**: when a stock's Balanced label reaches Accumulate or better, its entry, stop and target are locked and tracked to the end (Signal record page).
 - **My stocks**: watchlist and portfolio, saved only in your browser.
 - **Automatic data**: Bursa every 5 minutes and US every 15 minutes during trading hours (Bursa 9am–5pm MYT; US 9:30pm–5am MYT, an hour later outside US daylight saving), with exchange holidays and US half-days built in.

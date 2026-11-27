@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone, timedelta
@@ -155,6 +156,79 @@ def stock(page_t, ysym, tv, m, sec, kw, now):
     }
 
 
+# ---------- Whole-market coverage (Yahoo's screener, part of yfinance) ----------
+# Every Bursa stock, and US companies worth $2B+ on the main exchanges. One request returns up to 250 stocks,
+# so the whole market takes a few dozen requests. These stocks get price, day change, P/E, forward P/E,
+# dividend, 52-week range, market cap and the analyst rating — but no price history or analyst target.
+SECTORS = ["Basic Materials", "Industrials", "Communication Services", "Healthcare", "Real Estate", "Technology",
+           "Energy", "Utilities", "Financial Services", "Consumer Defensive", "Consumer Cyclical"]
+US_EXCH = {"NMS": "NASDAQ", "NGM": "NASDAQ", "NCM": "NASDAQ", "NYQ": "NYSE", "ASE": "AMEX"}
+US_MIN_CAP = 2_000_000_000
+
+
+def screen_all(m):
+    from yfinance import EquityQuery as Q
+    base = [Q("eq", ["region", "my" if m == "MY" else "us"])]
+    if m == "US":
+        base += [Q("is-in", ["exchange"] + list(US_EXCH)), Q("gte", ["intradaymarketcap", US_MIN_CAP])]
+    found, ok_req, bad_req = {}, 0, 0
+    for sec in SECTORS + [None]:  # a last pass without a sector catches stocks Yahoo hasn't classified
+        off = 0
+        while off < 3000:
+            q = Q("and", base + ([Q("eq", ["sector", sec])] if sec else []))
+            try:
+                r = yf.screen(q, size=250, offset=off, sortField="intradaymarketcap", sortAsc=False)
+                ok_req += 1
+            except Exception as e:
+                bad_req += 1
+                print(f"  screen {m} {sec} offset {off} failed: {e}", file=sys.stderr)
+                break
+            qs = r.get("quotes") or []
+            for x in qs:
+                sym = x.get("symbol") or ""
+                if sym and (sym not in found or (sec and found[sym][0] is None)):
+                    found[sym] = (sec, x)
+            off += len(qs)
+            if not qs or off >= (r.get("total") or 0):
+                break
+            time.sleep(SLEEP)
+    return found, ok_req, bad_req
+
+
+def uni_record(sym, sec, x, m, now, used):
+    if m == "MY":
+        if not re.fullmatch(r"\d{4}\.KL", sym):  # ordinary shares only (no warrants, ETFs or structured warrants)
+            return None
+        t = (x.get("shortName") or sym[:4]).strip().upper().replace(" ", "")
+    else:
+        if x.get("quoteType") != "EQUITY" or x.get("exchange") not in US_EXCH:
+            return None
+        t = sym
+    if t in used:
+        t = t + (".MY" if m == "MY" else ".US")
+    p = num(x.get("regularMarketPrice"))
+    ts = x.get("regularMarketTime")
+    if not p or p <= 0 or not ts:
+        return None
+    tz = KL if m == "MY" else NY
+    d = datetime.fromtimestamp(int(ts), tz).strftime("%Y-%m-%d")
+    rating = (x.get("averageAnalystRating") or "").split(" - ")
+    pe, fpe = num(x.get("trailingPE")), num(x.get("forwardPE"))
+    dps = num(x.get("dividendRate"))
+    if dps is None:
+        dps = num(x.get("trailingAnnualDividendRate"))
+    rnd = lambda v, k=4: None if v is None else round(v, k)
+    rec = {"t": t, "y": sym, "n": x.get("longName") or x.get("shortName") or t, "m": m, "sec": sec or "Other",
+           "p": rnd(p), "ch": rnd(num(x.get("regularMarketChangePercent")), 2), "d": d,
+           "pe": rnd(pe, 2) if pe and pe > 0 else None, "fpe": rnd(fpe, 2) if fpe and fpe > 0 else None,
+           "an": rating[1].strip() if len(rating) == 2 else None, "dps": rnd(dps),
+           "lo": rnd(num(x.get("fiftyTwoWeekLow"))), "hi": rnd(num(x.get("fiftyTwoWeekHigh"))),
+           "mc": round(x["marketCap"]) if num(x.get("marketCap")) else None}
+    if m == "US":
+        rec["ex"] = US_EXCH[x["exchange"]]
+    return {k: v for k, v in rec.items() if v is not None}  # fetch time is stored once per market (uniAsOf)
+
+
 def pick_market(now: datetime) -> str:
     v = (os.environ.get("DESK_MARKET") or (sys.argv[1] if len(sys.argv) > 1 else "")).strip().upper()
     if v in {"US", "MY", "ALL"}:
@@ -205,6 +279,31 @@ def main() -> int:
                 out_stocks.append(old)
         time.sleep(SLEEP)
 
+    # whole market: everything not already covered in detail above
+    core_syms = {r.get("y") for r in out_stocks}
+    used = {r["t"] for r in out_stocks}
+    prev_uni = {r["y"]: r for r in prev.get("uni", []) if r and r.get("y")}
+    uni, uni_fresh = [], {}
+    uni_asof = dict(prev.get("uniAsOf") or {})
+    for m in ["US", "MY"]:
+        if m not in markets:
+            uni += [r for r in prev_uni.values() if r["m"] == m and r["y"] not in core_syms]
+            continue
+        found, ok_req, bad_req = screen_all(m)
+        n = 0
+        for sym, (sec, x) in found.items():
+            if sym in core_syms:
+                continue
+            r = uni_record(sym, sec, x, m, now, used)
+            if r:
+                used.add(r["t"]); uni.append(r); n += 1
+        if bad_req and not n:  # the screener failed: keep yesterday's list, clearly marked
+            uni += [dict(r, stale=True) for r in prev_uni.values() if r["m"] == m and r["y"] not in core_syms]
+        uni_fresh[m] = n
+        if n:
+            uni_asof[m] = stamp
+        print(f"Whole market {m}: {n} stocks ({ok_req} requests ok, {bad_req} failed)")
+
     idx, series = dict(prev.get("idx") or {}), dict(prev.get("series") or {})
     idx_failed = []
     for name, (ysym, m) in INDEX.items():
@@ -235,7 +334,7 @@ def main() -> int:
         "lastAttempt": stamp,
         "lastAttemptMarkets": markets,
         "source": "Yahoo Finance via yfinance (delayed ~15 min / end-of-day)",
-        "stocks": out_stocks, "idx": idx, "series": series,
+        "stocks": out_stocks, "uni": uni, "uniFresh": uni_fresh, "uniAsOf": uni_asof, "idx": idx, "series": series,
         "mkUpdated": mk_updated,
         "failed": failed, "idxFailed": idx_failed,
         "fresh": fresh_count, "attempted": attempted,

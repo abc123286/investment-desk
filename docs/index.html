@@ -159,8 +159,10 @@ tfoot td{border-top:2px solid var(--ink)}
 <p class="mute">US: live charts and a whole-market screener from TradingView (near real-time). Bursa: TradingView's free widgets don't include Bursa data, so the Bursa board below uses Yahoo Finance prices (about 15 minutes delayed), refreshed every 15 minutes in trading hours. Each row says whether its price is intraday, a close, or a partial day.</p>
 <div id="newData" class="warnbox" hidden></div>
 <h3 style="margin-top:14px">Bursa price board <span class="mute sm" id="myUpd"></span></h3>
-<div class="filters"><label>Sort<select id="bSort"><option value="ch">Biggest moves</option><option value="up">Top gainers</option><option value="dn">Top losers</option><option value="t">A–Z</option><option value="score">Score</option></select></label></div>
+<div class="filters"><label class="grow">Search<input id="bQ" type="search" placeholder="Name, short name or code, e.g. GCB or 5102" autocomplete="off"></label><label>Sort<select id="bSort"><option value="ch">Biggest moves</option><option value="up">Top gainers</option><option value="dn">Top losers</option><option value="t">A–Z</option><option value="score">Score</option></select></label></div>
+<p class="sm mute" id="bCount"></p>
 <div class="scroll"><table class="stack" id="bBoard"></table></div>
+<p><button type="button" id="bMore" hidden>Show 40 more</button></p>
 <p class="sm mute">This page loads new prices by itself (it checks every minute). Tap a row for the stock's file. Need a Bursa stock that isn't listed? It can be added to the updater's list.</p>
 <h3 style="margin-top:22px">US live ticker</h3>
 <div id="tvTape" class="tvbox" style="min-height:46px"></div>
@@ -178,7 +180,7 @@ tfoot td{border-top:2px solid var(--ink)}
 <h2>AI stock screener</h2>
 <p class="mute">Every stock is scored 0–100 by the same formulas (engine.js); the strategy only changes the weights. Tap a row for the full file, or ☆ to add it to your watchlist. ° = not researched yet.</p>
 <div class="filters">
-<label class="grow">Search<input id="fQ" type="search" placeholder="Ticker or name, e.g. CIMB" autocomplete="off"></label>
+<label class="grow">Search<input id="fQ" type="search" placeholder="Ticker, name or Bursa code, e.g. GCB" autocomplete="off"></label>
 <label>Strategy<select id="fStrat" class="stratSel"></select></label>
 <label>Market<select id="fMkt"><option value="ALL">US + Bursa</option><option value="US">US only</option><option value="MY">Bursa only</option></select></label>
 <label>Sector<select id="fSec"><option value="ALL">All sectors</option></select></label>
@@ -281,6 +283,8 @@ tfoot td{border-top:2px solid var(--ink)}
 <p>While no signal is open, the plan is <b>indicative</b> and recalculated each update. Once a signal is issued (Balanced label Accumulate or better, plan worth taking), its entry, stop and target are <b>locked</b> and never follow the price. See <a href="#track">Signal record</a>.</p>
 <h3>Where the data comes from</h3>
 <p>Every 15 minutes in each market's trading hours, a GitHub job fetches prices, 52-week ranges, P/E, targets and 30 days of closes from Yahoo Finance (about 15 minutes delayed) with the open-source yfinance tool, then locks or closes signals. Exchange holidays and US half-days are built in. If fewer than half the stocks of a market update, the job is marked failed, older prices are kept and labelled, and a banner says so. Researched valuation figures are kept while under 30 days old, otherwise Yahoo's are used. Company codes are checked against Yahoo's company name. US live charts come from TradingView, which has no Bursa data in its free widgets.</p>
+<h3>Which stocks are covered</h3>
+<p>Every ordinary share on Bursa Malaysia (Main, ACE and LEAP markets; not warrants or ETFs), and US companies worth $2 billion or more on NASDAQ, NYSE and NYSE American — together a few thousand stocks, from Yahoo Finance's market screener. About 70 of them (the "core" list) also get 30 days of price history, analyst targets and analyst counts; the rest get price, day change, P/E, forward P/E, dividend, 52-week range, market cap and the analyst rating. Without a target, a stock's analyst-upside input counts as 0, so whole-market stocks score lower and with lower confidence than core stocks, and none of them can rank above Hold until researched.</p>
 <h3>Not included</h3>
 <p>MACD, moving averages, volume indicators, candlestick patterns, ROE/margins, DCF valuations and a historical backtest.</p>
 </div>

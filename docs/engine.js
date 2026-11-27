@@ -65,6 +65,15 @@ if(live&&Array.isArray(live.stocks)){
   if(ok(r.mc))x.mc=fmtMc(r.mc,x.cur);
   if(Array.isArray(r.hist)&&r.hist.length>=2)H[r.t]=r.hist.map(v=>ok(v)?v:null);
   if(!x.mc)x.mc='n/a'}
+ // whole market (Yahoo screener): price, day change, P/E, forward P/E, dividend, 52-week range, rating — no history or target
+ if(Array.isArray(live.uni)){const ua=live.uniAsOf||{},have=new Set(S.map(x=>x.y).filter(Boolean)),tks=new Set(S.map(x=>x.t));
+  for(const r of live.uni){if(!r||!pos(r.p)||!r.t||!r.d||!r.y||have.has(r.y)||tks.has(r.t))continue;have.add(r.y);tks.add(r.t);
+   const m=r.m,asOf=new Date(ua[m]||live.updated);
+   S.push({t:r.t,y:r.y,n:r.n||r.t,m,sec:r.sec||'Other',cur:m==='MY'?'MYR':'USD',ex:m==='MY'?'Bursa':(r.ex||''),tv:m==='US'&&r.ex?r.ex+':'+r.y.replace('-','.'):null,
+    cat:[],rk:[],researched:false,uni:true,live:true,s2:false,p:r.p,ch:num(r.ch),d:r.d,asOf,intraday:asOf<closeTs(r.d,m),stale:!!r.stale,
+    fd:null,pRef:r.p,pe:posn(r.pe),fpe:posn(r.fpe),tgt:null,na:null,an:r.an||null,dps:ok(r.dps)?r.dps:null,
+    lo:pos(r.lo)?Math.min(r.lo,r.p):null,hi:pos(r.hi)?Math.max(r.hi,r.p):null,mc:fmtMc(r.mc,m==='MY'?'MYR':'USD'),
+    ps:'Yahoo Finance market screener (auto-update)',pu:yURL(r.y),fu:yURL(r.y),valSrc:'Yahoo',rangeSrc:'Yahoo',tgtSrc:'Yahoo'})}}
  const I=live.idx||{};
  IDX.forEach(i=>{const v=I[i.k];if(!v||!ok(v.v))return;i.live=true;i.stale=!!v.stale;i.dRaw=v.d;
   if(i.t!==undefined){i.t=i.k==='Brent crude'?'$'+v.v.toFixed(2):v.v.toFixed(2)+'%';i.s=`${fmtD(v.d)} · ${v.c>=0?'+':''}${(v.c||0).toFixed(2)}%`}
@@ -301,14 +310,19 @@ function status(){const out=[];
  return out}
 
 /* ================= COMPACT PAYLOAD FOR ASK AI ================= */
-function aiPayload(sk){const r=v=>ok(v)?+v.toFixed(2):null;
- const rows=S.map(x=>{const e=evaluate(x,sk);if(e.bad)return {t:x.t,excluded:e.why};const M=e.M,P=e.sig||e.plan;
+function aiPayload(sk,question='',extra=[]){const r=v=>ok(v)?+v.toFixed(2):null;
+ // the whole market is too big to send: researched stocks, the top 40, your watchlist, and any stock named in the question
+ const qU=' '+String(question).toUpperCase().replace(/[^A-Z0-9&.]+/g,' ')+' ';
+ const named=x=>qU.includes(' '+x.t+' ')||(x.n&&x.n.length>3&&String(question).toLowerCase().includes(String(x.n).toLowerCase().split(' ')[0])&&String(x.n).split(' ')[0].length>3);
+ const top=new Set(S.map(x=>({x,e:evaluate(x,sk)})).filter(o=>!o.e.bad).sort((a,b)=>rank(b.e.cls)-rank(a.e.cls)||b.e.score-a.e.score).slice(0,40).map(o=>o.x.t));
+ const pick=S.filter(x=>x.researched||top.has(x.t)||extra.includes(x.t)||named(x)).slice(0,120);
+ const rows=pick.map(x=>{const e=evaluate(x,sk);if(e.bad)return {t:x.t,excluded:e.why};const M=e.M,P=e.sig||e.plan;
   return {t:x.t,n:x.n,m:x.m,sec:x.sec,p:x.p,d:x.d,age:M.age.kind+(M.age.missed?` (${M.age.missed} closes missing)`:''),ch:x.ch,score:e.score,label:e.cls,conf:e.conf,
    why:e.why.map(w=>w.replace(/ \(−\d+\)$/,'')),caps:e.caps,sub:Object.fromEntries(Object.entries(M.sc).filter(([k])=>k in STRAT[sk].w).map(([k,v])=>[k,v===null?null:Math.round(v)])),
    fpe:r(M.fpe),yld:M.yld===null?null:r(M.yld*100),up:M.up===null?null:Math.round(M.up*100),an:x.an?`${x.an} (${x.na??'?'})`:null,
    plan:P?{locked:!!e.sig,entry:[P.eLo??P.entryLo,P.eHi??P.entryHi],stop:P.stop,target:P.tgt??P.target}:null,news:Math.round(M.news.net),risk:M.flag?M.flag.t:null,
    researched:x.researched,...(x.researched?{cat:x.cat,rk:x.rk,notesDated:x.rd}:{})}});
- return {now:NOW.toISOString(),usdmyr:FX,counts:{US:S.filter(x=>x.m==='US').length,MY:S.filter(x=>x.m==='MY').length},
+ return {now:NOW.toISOString(),usdmyr:FX,counts:{US:S.filter(x=>x.m==='US').length,MY:S.filter(x=>x.m==='MY').length},stocksIncluded:'researched stocks, the top 40 by label, the user\'s watchlist and any stock named in the question; the site tracks more',
   pricesUpdated:live&&live.mkUpdated?{MY:live.mkUpdated.MY,US:live.mkUpdated.US}:{research:R.BUILT},
   usMood:{label:US.val,rule:US.rule},bursaMood:{label:MY.val,rule:MY.rule},strategy:{name:STRAT[sk].n,weights:STRAT[sk].w},
   bands:'70+ Strong Buy (conf 75+), 62+ Buy, 55+ Accumulate, 47+ Hold, 40+ Watchlist, 33+ Reduce, <33 Avoid. Missing inputs count as 0; 30%+ missing = Incomplete data. Unresearched capped at Hold. Capped at Watchlist for stale price, confidence <60, severe news, open event risk, stop hit. Not backtested.',
