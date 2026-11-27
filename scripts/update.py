@@ -175,7 +175,8 @@ def screen_all(m):
     for sec in SECTORS + [None]:  # a last pass without a sector catches stocks Yahoo hasn't classified
         off = 0
         while off < 3000:
-            q = Q("and", base + ([Q("eq", ["sector", sec])] if sec else []))
+            parts = base + ([Q("eq", ["sector", sec])] if sec else [])
+            q = parts[0] if len(parts) == 1 else Q("and", parts)
             try:
                 r = yf.screen(q, size=250, offset=off, sortField="intradaymarketcap", sortAsc=False)
                 ok_req += 1
