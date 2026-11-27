@@ -1,6 +1,6 @@
 {
  "v": 1,
- "updated": "2026-11-27T08:51:08.593Z",
+ "updated": "2026-11-27T08:55:59.616Z",
  "open": [
   {
    "id": "MAYBANK-2026-11-27",
@@ -22,7 +22,7 @@
    "rr": 3,
    "horizonDays": 365,
    "last": 10.32,
-   "lastAt": "2026-11-27T08:50:32.000Z",
+   "lastAt": "2026-11-27T08:55:27.000Z",
    "lastLabel": "Accumulate"
   },
   {
@@ -44,8 +44,8 @@
    "target": 8.31,
    "rr": 2.97,
    "horizonDays": 365,
-   "last": 7.34,
-   "lastAt": "2026-11-27T08:50:32.000Z",
+   "last": 7.29,
+   "lastAt": "2026-11-27T08:55:27.000Z",
    "lastLabel": "Buy Candidate"
   },
   {
@@ -67,8 +67,8 @@
    "target": 15.94,
    "rr": 5.87,
    "horizonDays": 365,
-   "last": 12.58,
-   "lastAt": "2026-11-27T08:50:32.000Z",
+   "last": 12.56,
+   "lastAt": "2026-11-27T08:55:27.000Z",
    "lastLabel": "Accumulate"
   }
  ],
